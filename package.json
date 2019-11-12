@@ -1,0 +1,33 @@
+{
+	"name": "gateway-raspberry-pi",
+	"version": "1.0.0",
+	"description": "A BLE gateway implementation for nRF Cloud that can run on Raspberry Pi",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/nRFCloud/gateway-raspberry-pi.git"
+	},
+	"keywords": [
+		"raspbery",
+		"gateway",
+		"nordic",
+		"nrfcloud",
+		"ble"
+	],
+	"author": "Nathan Kerr",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/nRFCloud/gateway-raspberry-pi/issues"
+	},
+	"homepage": "https://github.com/nRFCloud/gateway-raspberry-pi#readme",
+	"dependencies": {
+		"aws-iot-device-sdk": "^2.2.1",
+		"bluetooth-hci-socket": "^0.5.1",
+		"dotenv": "^8.2.0",
+		"noble-uwp": "^0.6.2"
+	}
+}
