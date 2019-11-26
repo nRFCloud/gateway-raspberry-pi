@@ -1,4 +1,5 @@
 const awsIot = require('aws-iot-device-sdk');
+const { handleC2GMessage } = require('./messageHandler');
 
 function createGateway(configuration) {
 	const keyPath = configuration.keyPath || process.env.PRIVATE_KEY_PATH;
@@ -9,9 +10,12 @@ function createGateway(configuration) {
 	const stage = configuration.stage || process.env.ENVIRONMENT_STAGE;
 	const tenantId = configuration.tenantId || process.env.TENANT_ID;
 
-	const messageCallback = configuration.onMessage || function () {
-	};
-	const shadowMessageCallback = configuration.onShadowMessage || function() {};
+	const bluetoothHandler = configuration.bluetoothHandler;
+
+	if (!bluetoothHandler || !keyPath || !certPath || !caPath || !clientId || !host || !stage || !tenantId) {
+		throw new Error('Missing configuration');
+	}
+
 	const errorCallback = configuration.onError || function (error) {
 		console.error(error);
 	};
@@ -39,11 +43,11 @@ function createGateway(configuration) {
 
 		const msg = JSON.parse(payload);
 		if (topic === c2gTopic) {
-			messageCallback(msg);
+			handleG2CMessage(msg, bluetoothHandler);
 		}
 
 		if (topic.startsWith(shadowDataBaseTopic)) {
-			shadowMessageCallback(msg);
+			handleShadowMessage(msg);
 		}
 	});
 
@@ -57,6 +61,15 @@ function createGateway(configuration) {
 	device.subscribe(c2gTopic);
 
 	return device;
+}
+
+function handleG2CMessage(message, bluetoothHandler) {
+	console.info('g2c message', message);
+	handleC2GMessage(message, bluetoothHandler);
+}
+
+function handleShadowMessage(message) {
+	console.info('shadow message', message);
 }
 
 exports.createGateway = createGateway;

@@ -1,7 +1,7 @@
 require('dotenv').config();
 
+const bluetoothInterface = require('./src/bluetoothInterface');
 const { createGateway } = require('./src/gateway');
-const { handleC2GMessage } = require('./src/messageHandler');
 
 const configuration = {
 	keyPath: process.env.PRIVATE_KEY_PATH,
@@ -11,19 +11,8 @@ const configuration = {
 	host: process.env.HOST,
 	stage: process.env.ENVIRONMENT_STAGE,
 	tenantId: process.env.TENANT_ID,
-	onMessage: handleG2CMessage,
-	onShadowMessage: handleShadowMessage,
-	onError: (error) => console.error('Error from MQTT', error),
+	bluetoothHandler: bluetoothInterface
 };
-
-function handleG2CMessage(message) {
-	console.info('g2c message', message);
-	handleC2GMessage(message);
-}
-
-function handleShadowMessage(message) {
-	console.info('shadow message', message);
-}
 
 const gateway = createGateway(configuration);
 
