@@ -11,6 +11,7 @@ function createGateway(configuration) {
 
 	const messageCallback = configuration.onMessage || function () {
 	};
+	const shadowMessageCallback = configuration.onShadowMessage || function() {};
 	const errorCallback = configuration.onError || function (error) {
 		console.error(error);
 	};
@@ -23,21 +24,36 @@ function createGateway(configuration) {
 		host: host,
 	});
 
+	const c2gTopic = `${stage}/${tenantId}/gateways/${clientId}/c2g`;
+	const shadowDataBaseTopic = `$aws/things/${clientId}/shadow`;
+
 	device.on('connect', function() {
 		console.log('connect');
 		device.publish(`${shadowDataBaseTopic}/get`, '');
 	});
 
-	device.on('message', messageCallback);
+	device.on('message', function (topic, payload){
+		if (!payload) {
+			return;
+		}
+
+		const msg = JSON.parse(payload);
+		if (topic === c2gTopic) {
+			messageCallback(msg);
+		}
+
+		if (topic.startsWith(shadowDataBaseTopic)) {
+			shadowMessageCallback(msg);
+		}
+	});
 
 	device.on('error', errorCallback);
 
-	const shadowDataBaseTopic = `$aws/things/${clientId}/shadow`;
 	device.subscribe(`${shadowDataBaseTopic}/get/accepted`);
 	device.subscribe(`${shadowDataBaseTopic}/update/delta`);
 
 //Need to subscribe to c2g topic
-	const c2gTopic = `${stage}/${tenantId}/gateways/${clientId}/c2g`;
+
 	device.subscribe(c2gTopic);
 
 	return device;
