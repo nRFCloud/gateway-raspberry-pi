@@ -61,6 +61,5 @@ typings/
 .next
 /private.key
 /.env
-/ca.pem
 /client.pem
 .idea
