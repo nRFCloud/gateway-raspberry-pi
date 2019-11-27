@@ -41,13 +41,15 @@ var NobleAdapter = (function (_super) {
             device.advertisementData = _this.convertAdvertisementData(peripheral.advertisement);
             resultCallback(device);
         });
+        noble_1.default.startScanning();
+        setTimeout(function () { return noble_1.default.stopScaninng(); }, scanTimeout * 1000);
     };
     NobleAdapter.prototype.convertAdvertisementData = function (advertisement) {
         var data = new scanResult_1.AdvertisementData();
         data.serviceUuids = advertisement.serviceUuids;
         data.localName = advertisement.localName;
         data.txPower = advertisement.txPowerLevel;
-        data.manufacturerData = Array.from(advertisement.manufacturerData);
+        data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
         return data;
     };
     return NobleAdapter;

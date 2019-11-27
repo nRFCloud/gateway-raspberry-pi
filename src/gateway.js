@@ -124,6 +124,7 @@ var Gateway = (function () {
         this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
     };
     Gateway.prototype.handleScanResult = function (result) {
+        console.log('scan result', result);
     };
     return Gateway;
 }());

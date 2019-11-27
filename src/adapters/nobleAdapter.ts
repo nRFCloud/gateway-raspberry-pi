@@ -45,7 +45,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		data.serviceUuids = advertisement.serviceUuids
 		data.localName = advertisement.localName;
 		data.txPower = advertisement.txPowerLevel;
-		data.manufacturerData = Array.from(advertisement.manufacturerData);
+		data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
 		return data;
 	}
 }
