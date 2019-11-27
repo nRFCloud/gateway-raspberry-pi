@@ -152,7 +152,7 @@ export class Gateway {
 		scanReporting: 'instant' | 'batch' = 'instant',
 		filter?: {rssi?: number, name?: string}
 	) {
-		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
+		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, (result, timedout = false) => this.handleScanResult(result, timedout));
 	}
 
 	private handleScanResult(result: DeviceScanResult, timeout: boolean = false) {

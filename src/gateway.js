@@ -124,12 +124,16 @@ var Gateway = (function () {
         console.error('Error from MQTT', error);
     };
     Gateway.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
+        var _this = this;
         if (scanTimeout === void 0) { scanTimeout = 3; }
         if (scanMode === void 0) { scanMode = 'active'; }
         if (scanType === void 0) { scanType = 0; }
         if (scanInterval === void 0) { scanInterval = 0; }
         if (scanReporting === void 0) { scanReporting = 'instant'; }
-        this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
+        this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, function (result, timedout) {
+            if (timedout === void 0) { timedout = false; }
+            return _this.handleScanResult(result, timedout);
+        });
     };
     Gateway.prototype.handleScanResult = function (result, timeout) {
         if (timeout === void 0) { timeout = false; }
