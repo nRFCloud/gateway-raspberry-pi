@@ -19,6 +19,7 @@ var Gateway = (function () {
         this.host = config.host;
         this.stage = config.stage;
         this.tenantId = config.tenantId;
+        this.bluetoothAdapter = config.bluetoothAdapter;
         this.gatewayDevice = new awsIot.device({
             keyPath: this.keyPath,
             certPath: this.certPath,
@@ -26,7 +27,6 @@ var Gateway = (function () {
             clientId: this.gatewayId,
             host: this.host,
         });
-        console.log(this.gatewayDevice);
         this.gatewayDevice.on('connect', function () {
             console.log('connect');
             _this.gatewayDevice.publish("" + _this.shadowGetTopic, '');
@@ -67,6 +67,9 @@ var Gateway = (function () {
         enumerable: true,
         configurable: true
     });
+    Gateway.prototype.onDelete = function (handler) {
+        this.deleteHandler = handler;
+    };
     Gateway.prototype.handleMessage = function (topic, payload) {
         var message = JSON.parse(payload);
         if (topic === this.c2gTopic) {
@@ -99,6 +102,10 @@ var Gateway = (function () {
             case 'get_gateway_status':
                 break;
             case 'delete_yourself':
+                console.log('Gateway has been deleted');
+                if (typeof this.deleteHandler === 'function') {
+                    this.deleteHandler();
+                }
                 break;
         }
     };
@@ -109,7 +116,14 @@ var Gateway = (function () {
         console.error('Error from MQTT', error);
     };
     Gateway.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
-        console.info('starting scan with params', arguments);
+        if (scanTimeout === void 0) { scanTimeout = 3; }
+        if (scanMode === void 0) { scanMode = 'active'; }
+        if (scanType === void 0) { scanType = 0; }
+        if (scanInterval === void 0) { scanInterval = 0; }
+        if (scanReporting === void 0) { scanReporting = 'instant'; }
+        this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
+    };
+    Gateway.prototype.handleScanResult = function (result) {
     };
     return Gateway;
 }());

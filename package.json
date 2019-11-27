@@ -5,7 +5,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "tsc && node index.js"
+		"build": "tsc",
+		"start": "node index.js",
+		"postinstall": "npm run build"
 	},
 	"repository": {
 		"type": "git",
@@ -25,11 +27,12 @@
 	},
 	"homepage": "https://github.com/nRFCloud/gateway-raspberry-pi#readme",
 	"dependencies": {
+		"@abandonware/noble": "^1.9.2-5",
 		"@types/aws-iot-device-sdk": "^2.2.0",
+		"@types/noble": "0.0.39",
 		"aws-iot-device-sdk": "^2.2.1",
 		"bluetooth-hci-socket": "^0.5.1",
-		"dotenv": "^8.2.0",
-		"noble-uwp": "^0.6.2"
+		"dotenv": "^8.2.0"
 	},
 	"devDependencies": {
 		"ts-node": "^8.5.2",

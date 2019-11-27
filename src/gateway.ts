@@ -1,4 +1,6 @@
 import * as awsIot from "aws-iot-device-sdk";
+import { BluetoothAdapter } from './bluetoothAdapter';
+import { DeviceScanResult } from './interfaces/scanResult';
 
 export type GatewayConfiguration = {
 	keyPath?: string;
@@ -8,17 +10,21 @@ export type GatewayConfiguration = {
 	host?: string;
 	stage?: string;
 	tenantId?: string;
+	bluetoothAdapter: BluetoothAdapter;
 }
 
 export class Gateway {
-	keyPath: string;
-	certPath: string;
-	caPath: string;
-	gatewayId: string;
-	host: string;
-	stage: string;
-	tenantId: string;
-	gatewayDevice: any;
+	readonly keyPath: string;
+	readonly certPath: string;
+	readonly caPath: string;
+	readonly gatewayId: string;
+	readonly host: string;
+	readonly stage: string;
+	readonly tenantId: string;
+	readonly gatewayDevice: awsIot.device;
+	readonly bluetoothAdapter: BluetoothAdapter;
+
+	deleteHandler;
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
@@ -45,6 +51,7 @@ export class Gateway {
 		this.host = config.host;
 		this.stage = config.stage;
 		this.tenantId = config.tenantId;
+		this.bluetoothAdapter = config.bluetoothAdapter;
 
 		this.gatewayDevice = new awsIot.device({
 			keyPath: this.keyPath,
@@ -53,7 +60,6 @@ export class Gateway {
 			clientId: this.gatewayId,
 			host: this.host,
 		});
-		console.log(this.gatewayDevice);
 
 		this.gatewayDevice.on('connect', () => {
 			console.log('connect');
@@ -69,6 +75,10 @@ export class Gateway {
 		this.gatewayDevice.subscribe(this.c2gTopic);
 		this.gatewayDevice.subscribe(`${this.shadowGetTopic}/accepted`);
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
+	}
+
+	onDelete(handler: () => void) {
+		this.deleteHandler = handler;
 	}
 
 	private handleMessage(topic: string, payload) {
@@ -105,6 +115,10 @@ export class Gateway {
 			case 'get_gateway_status': //Get information about the gateway
 				break;
 			case 'delete_yourself': //User has deleted this gateway from their account
+				console.log('Gateway has been deleted');
+				if (typeof this.deleteHandler === 'function') {
+					this.deleteHandler();
+				}
 				break;
 		}
 	}
@@ -126,8 +140,18 @@ export class Gateway {
 	 * @param scanReporting When results should be reported: "instant" or "batch" (default instant)
 	 * @param filter An object: {rssi, name}. If set, results should only be reported if they are higher then sent rssi and/or match name
 	 */
-	private startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
-		console.info('starting scan with params', arguments);
+	private startScan(
+		scanTimeout: number = 3,
+		scanMode: 'active' | 'passive' = 'active',
+		scanType: 0 | 1 = 0,
+		scanInterval: number = 0,
+		scanReporting: 'instant' | 'batch' = 'instant',
+		filter?: {rssi?: number, name?: string}
+	) {
+		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
+	}
+
+	private handleScanResult(result: DeviceScanResult) {
 	}
 
 }
