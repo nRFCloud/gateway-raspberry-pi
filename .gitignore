@@ -63,3 +63,6 @@ typings/
 /.env
 /client.pem
 .idea
+*.env
+*.pem
+*.key
