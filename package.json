@@ -31,7 +31,6 @@
 		"@types/aws-iot-device-sdk": "^2.2.0",
 		"@types/noble": "0.0.39",
 		"aws-iot-device-sdk": "^2.2.1",
-		"bluetooth-hci-socket": "^0.5.1",
 		"dotenv": "^8.2.0"
 	},
 	"devDependencies": {
