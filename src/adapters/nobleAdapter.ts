@@ -36,6 +36,8 @@ export class NobleAdapter extends BluetoothAdapter {
 			device.advertisementData = this.convertAdvertisementData(peripheral.advertisement);
 			resultCallback(device);
 		});
+		noble.startScanning();
+		setTimeout(() => noble.stopScaninng(), scanTimeout * 1000);
 	}
 
 	private convertAdvertisementData(advertisement: Advertisement): AdvertisementData {

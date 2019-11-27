@@ -152,6 +152,7 @@ export class Gateway {
 	}
 
 	private handleScanResult(result: DeviceScanResult) {
+		console.log('scan result', result);
 	}
 
 }
