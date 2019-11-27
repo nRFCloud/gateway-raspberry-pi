@@ -42,7 +42,10 @@ var NobleAdapter = (function (_super) {
             resultCallback(device);
         });
         noble_1.default.startScanning();
-        setTimeout(function () { return noble_1.default.stopScaninng(); }, scanTimeout * 1000);
+        setTimeout(function () {
+            noble_1.default.stopScanning();
+            resultCallback(null, true);
+        }, scanTimeout * 1000);
     };
     NobleAdapter.prototype.convertAdvertisementData = function (advertisement) {
         var data = new scanResult_1.AdvertisementData();

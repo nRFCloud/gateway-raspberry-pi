@@ -11,6 +11,7 @@ var awsIot = __importStar(require("aws-iot-device-sdk"));
 var Gateway = (function () {
     function Gateway(config) {
         var _this = this;
+        this.messageId = 0;
         console.info('got config object', config);
         this.keyPath = config.keyPath;
         this.certPath = config.certPath;
@@ -42,6 +43,13 @@ var Gateway = (function () {
     Object.defineProperty(Gateway.prototype, "c2gTopic", {
         get: function () {
             return this.stage + "/" + this.tenantId + "/gateways/" + this.gatewayId + "/c2g";
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Gateway.prototype, "g2cTopic", {
+        get: function () {
+            return this.stage + "/" + this.tenantId + "/gateways/" + this.gatewayId + "/g2c";
         },
         enumerable: true,
         configurable: true
@@ -123,8 +131,29 @@ var Gateway = (function () {
         if (scanReporting === void 0) { scanReporting = 'instant'; }
         this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
     };
-    Gateway.prototype.handleScanResult = function (result) {
-        console.log('scan result', result);
+    Gateway.prototype.handleScanResult = function (result, timeout) {
+        if (timeout === void 0) { timeout = false; }
+        var scanEvent = {
+            type: 'scan_result',
+            subType: 'instant',
+            timestamp: new Date().toISOString(),
+            devices: [result],
+            timeout: timeout,
+        };
+        var g2cEvent = this.getG2CEvent(scanEvent);
+        this.publish(this.g2cTopic, g2cEvent);
+    };
+    Gateway.prototype.getG2CEvent = function (event) {
+        return {
+            type: 'event',
+            gatewayId: this.gatewayId,
+            event: event,
+        };
+    };
+    Gateway.prototype.publish = function (topic, event) {
+        event.messageId = this.messageId++;
+        var message = JSON.stringify(event);
+        this.gatewayDevice.publish(topic, message);
     };
     return Gateway;
 }());

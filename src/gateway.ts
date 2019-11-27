@@ -30,6 +30,10 @@ export class Gateway {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
 	}
 
+	get g2cTopic(): string {
+		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/g2c`;
+	}
+
 	private get shadowGetTopic(): string {
 		return `${this.shadowTopic}/get`;
 	}
@@ -151,8 +155,32 @@ export class Gateway {
 		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, this.handleScanResult);
 	}
 
-	private handleScanResult(result: DeviceScanResult) {
-		console.log('scan result', result);
+	private handleScanResult(result: DeviceScanResult, timeout: boolean = false) {
+		const scanEvent = {
+			type: 'scan_result',
+			subType: 'instant',
+			timestamp: new Date().toISOString(),
+			devices: [result],
+			timeout,
+		};
+		const g2cEvent = this.getG2CEvent(scanEvent);
+		this.publish(this.g2cTopic, g2cEvent);
+	}
+
+	private getG2CEvent(event) {
+		return {
+			type: 'event',
+			gatewayId: this.gatewayId,
+			event,
+		};
+	}
+
+	messageId = 0;
+	private publish(topic: string, event) {
+		event.messageId = this.messageId++;
+		const message = JSON.stringify(event);
+
+		this.gatewayDevice.publish(topic, message);
 	}
 
 }

@@ -1,4 +1,4 @@
-import { Device } from './device';
+import { Address } from './device';
 
 export class AdvertisementData {
 	advertiseFlag: number;
@@ -9,15 +9,13 @@ export class AdvertisementData {
 	serviceData: {[key: string]: number[]};
 }
 
-export class DeviceScanResult extends Device {
+export class DeviceScanResult {
 	name: string;
-	services: any;
-	flags: any;
-	scanResponse: any;
-	time: Date;
-	txPower: number;
-	advertisementType: string;
 	rssi: number;
-	rssiLevel: number;
+	time: string;
+	advertisementType: string;
+	deviceType: string = 'BLE';
+	address: Address;
+	serviceUUIDs: Array<string>;
 	advertisementData: AdvertisementData;
 }

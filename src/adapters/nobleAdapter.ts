@@ -23,7 +23,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		scanInterval: number,
 		scanReporting: "instant" | "batch",
 		filter: { rssi?: number; name?: string },
-		resultCallback: (deviceScanResult: DeviceScanResult) => void
+		resultCallback: (deviceScanResult: DeviceScanResult, timedout?: boolean) => void
 	) {
 		noble.on('discover', (peripheral: Peripheral) => {
 			const device = new DeviceScanResult();
@@ -37,7 +37,10 @@ export class NobleAdapter extends BluetoothAdapter {
 			resultCallback(device);
 		});
 		noble.startScanning();
-		setTimeout(() => noble.stopScaninng(), scanTimeout * 1000);
+		setTimeout(() => {
+			noble.stopScanning();
+			resultCallback(null, true);
+		}, scanTimeout * 1000);
 	}
 
 	private convertAdvertisementData(advertisement: Advertisement): AdvertisementData {

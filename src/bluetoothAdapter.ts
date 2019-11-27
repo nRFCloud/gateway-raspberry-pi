@@ -19,6 +19,6 @@ export abstract class BluetoothAdapter {
 		scanInterval: number,
 		scanReporting: 'instant' | 'batch',
 		filter: {rssi?: number, name?: string},
-		resultCallback: (deviceScanResult: DeviceScanResult) => void,
+		resultCallback: (deviceScanResult: DeviceScanResult, timedout?: boolean) => void,
 	);
 }
