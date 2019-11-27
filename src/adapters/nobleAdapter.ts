@@ -5,8 +5,6 @@ import { BluetoothAdapter } from '../bluetoothAdapter';
 import { AdvertisementData, DeviceScanResult } from '../interfaces/scanResult';
 import { Address } from '../interfaces/device';
 
-
-
 export class NobleAdapter extends BluetoothAdapter {
 	constructor() {
 		super();
@@ -27,10 +25,10 @@ export class NobleAdapter extends BluetoothAdapter {
 	) {
 		noble.on('discover', (peripheral: Peripheral) => {
 			const device = new DeviceScanResult();
-			device.address = <Address>{
+			device.address = {
 				address: peripheral.address,
 				type: peripheral.addressType,
-			};
+			} as Address;
 			device.rssi = peripheral.rssi;
 			device.name = peripheral.advertisement.localName;
 			device.advertisementData = this.convertAdvertisementData(peripheral.advertisement);

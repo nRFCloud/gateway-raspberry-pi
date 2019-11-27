@@ -67,7 +67,7 @@ export class Gateway {
 
 		this.gatewayDevice.on('connect', () => {
 			console.log('connect');
-			this.gatewayDevice.publish(`${this.shadowGetTopic}`, '');
+			this.gatewayDevice.publish(this.shadowGetTopic, '');
 		});
 
 		this.gatewayDevice.on('message', (topic, payload) => {
@@ -88,7 +88,7 @@ export class Gateway {
 	private handleMessage(topic: string, payload) {
 		const message = JSON.parse(payload);
 		if (topic === this.c2gTopic) {
-			this.handleG2CMessage(message);
+			this.handleC2GMessage(message);
 		}
 
 		if (topic.indexOf(this.shadowTopic) === 0) {
@@ -96,7 +96,7 @@ export class Gateway {
 		}
 	}
 
-	private handleG2CMessage(message) {
+	private handleC2GMessage(message) {
 		console.log('got g2c message', message);
 		if (!message || !message.type || !message.id || message.type !== 'operation' || !message.operation || !message.operation.type) {
 			throw new Error('Unknown message ' + JSON.stringify(message));
@@ -128,7 +128,7 @@ export class Gateway {
 	}
 
 	private handleShadowMessage(message) {
-		console.log('got shadow message', message);
+		console.log('got shadow message', JSON.stringify(message));
 	}
 
 	private handleError(error) {

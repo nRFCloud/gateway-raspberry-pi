@@ -30,7 +30,7 @@ var Gateway = (function () {
         });
         this.gatewayDevice.on('connect', function () {
             console.log('connect');
-            _this.gatewayDevice.publish("" + _this.shadowGetTopic, '');
+            _this.gatewayDevice.publish(_this.shadowGetTopic, '');
         });
         this.gatewayDevice.on('message', function (topic, payload) {
             _this.handleMessage(topic, payload);
@@ -81,13 +81,13 @@ var Gateway = (function () {
     Gateway.prototype.handleMessage = function (topic, payload) {
         var message = JSON.parse(payload);
         if (topic === this.c2gTopic) {
-            this.handleG2CMessage(message);
+            this.handleC2GMessage(message);
         }
         if (topic.indexOf(this.shadowTopic) === 0) {
             this.handleShadowMessage(message);
         }
     };
-    Gateway.prototype.handleG2CMessage = function (message) {
+    Gateway.prototype.handleC2GMessage = function (message) {
         console.log('got g2c message', message);
         if (!message || !message.type || !message.id || message.type !== 'operation' || !message.operation || !message.operation.type) {
             throw new Error('Unknown message ' + JSON.stringify(message));
@@ -118,7 +118,7 @@ var Gateway = (function () {
         }
     };
     Gateway.prototype.handleShadowMessage = function (message) {
-        console.log('got shadow message', message);
+        console.log('got shadow message', JSON.stringify(message));
     };
     Gateway.prototype.handleError = function (error) {
         console.error('Error from MQTT', error);
