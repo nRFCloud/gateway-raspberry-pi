@@ -141,7 +141,7 @@ var Gateway = (function () {
             type: 'scan_result',
             subType: 'instant',
             timestamp: new Date().toISOString(),
-            devices: [result],
+            devices: result ? [result] : [],
             timeout: timeout,
         };
         var g2cEvent = this.getG2CEvent(scanEvent);

@@ -160,7 +160,7 @@ export class Gateway {
 			type: 'scan_result',
 			subType: 'instant',
 			timestamp: new Date().toISOString(),
-			devices: [result],
+			devices: result ? [result] : [],
 			timeout,
 		};
 		const g2cEvent = this.getG2CEvent(scanEvent);
