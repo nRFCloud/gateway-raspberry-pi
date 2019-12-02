@@ -231,6 +231,14 @@ export class Gateway extends EventEmitter {
 			}
 		}
 
+		for (const connection of this.deviceConnections) {
+			try {
+				await this.bluetoothAdapter.connect(connection);
+			} catch (err) {
+				console.error('Error connecting', err);
+			}
+		}
+
 		if (!arrayDeepEquals(this.deviceConnections, existingConnections)) {
 			this.reportConnections();
 		}

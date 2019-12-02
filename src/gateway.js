@@ -236,27 +236,27 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.updateDeviceConnections = function (connections) {
         return __awaiter(this, void 0, void 0, function () {
-            var existingConnections, connectionsToAdd, connectionsToRemove, _i, connectionsToRemove_1, connectionToRemove, error_1, removedIndex, _a, connectionsToAdd_1, connectionToAdd;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var existingConnections, connectionsToAdd, connectionsToRemove, _i, connectionsToRemove_1, connectionToRemove, error_1, removedIndex, _a, connectionsToAdd_1, connectionToAdd, _b, _c, connection, err_1;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         existingConnections = __spreadArrays(this.deviceConnections);
                         connectionsToAdd = connections.filter(function (id) { return existingConnections.indexOf(id) < 0; });
                         connectionsToRemove = existingConnections.filter(function (id) { return connections.indexOf(id) < 0; });
                         _i = 0, connectionsToRemove_1 = connectionsToRemove;
-                        _b.label = 1;
+                        _d.label = 1;
                     case 1:
                         if (!(_i < connectionsToRemove_1.length)) return [3, 7];
                         connectionToRemove = connectionsToRemove_1[_i];
-                        _b.label = 2;
+                        _d.label = 2;
                     case 2:
-                        _b.trys.push([2, 4, 5, 6]);
+                        _d.trys.push([2, 4, 5, 6]);
                         return [4, this.bluetoothAdapter.disconnect(connectionToRemove)];
                     case 3:
-                        _b.sent();
+                        _d.sent();
                         return [3, 6];
                     case 4:
-                        error_1 = _b.sent();
+                        error_1 = _d.sent();
                         console.error('error', "Error removing connection to device " + (error_1 instanceof Object ? JSON.stringify(error_1) : error_1));
                         return [3, 6];
                     case 5:
@@ -276,6 +276,26 @@ var Gateway = (function (_super) {
                                 this.deviceConnections.push(connectionToAdd);
                             }
                         }
+                        _b = 0, _c = this.deviceConnections;
+                        _d.label = 8;
+                    case 8:
+                        if (!(_b < _c.length)) return [3, 13];
+                        connection = _c[_b];
+                        _d.label = 9;
+                    case 9:
+                        _d.trys.push([9, 11, , 12]);
+                        return [4, this.bluetoothAdapter.connect(connection)];
+                    case 10:
+                        _d.sent();
+                        return [3, 12];
+                    case 11:
+                        err_1 = _d.sent();
+                        console.error('Error connecting', err_1);
+                        return [3, 12];
+                    case 12:
+                        _b++;
+                        return [3, 8];
+                    case 13:
                         if (!utils_1.arrayDeepEquals(this.deviceConnections, existingConnections)) {
                             this.reportConnections();
                         }
