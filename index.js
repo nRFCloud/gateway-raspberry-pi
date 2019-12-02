@@ -17,8 +17,11 @@ function main(useNoble) {
         bluetoothAdapter: useNoble ? new nobleAdapter_1.NobleAdapter() : new exampleAdapter_1.ExampleAdapter(),
     };
     var gateway = new gateway_1.Gateway(configuration);
-    gateway.onDelete(function () {
+    gateway.on(gateway_1.GatewayEvent.Deleted, function () {
         process.exit();
+    });
+    gateway.on(gateway_1.GatewayEvent.NameChanged, function (newName) {
+        console.log("Gateway name changed to " + newName);
     });
 }
 main(process.argv.includes('noble'));

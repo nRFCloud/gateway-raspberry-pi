@@ -1,7 +1,7 @@
 import { BluetoothAdapter } from '../bluetoothAdapter';
 import { DeviceScanResult } from '../interfaces/scanResult';
 
-export class ExampleAdapter implements BluetoothAdapter {
+export class ExampleAdapter extends BluetoothAdapter {
 	startScan(
 		scanTimeout: number,
 		scanMode: "active" | "passive",
@@ -26,5 +26,13 @@ export class ExampleAdapter implements BluetoothAdapter {
 		device.name = rawScanResult.name;
 		device.advertisementData = rawScanResult.advertisementData;
 		return device;
+	}
+
+	disconnect(id: string): Promise<any> {
+		return undefined;
+	}
+
+	connect(id: string): Promise<any> {
+		return undefined;
 	}
 }

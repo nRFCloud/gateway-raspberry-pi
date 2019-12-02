@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-import { Gateway, GatewayConfiguration } from './src/gateway';
+import { Gateway, GatewayConfiguration, GatewayEvent } from './src/gateway';
 import { ExampleAdapter } from './src/adapters/exampleAdapter';
 import { NobleAdapter } from './src/adapters/nobleAdapter';
 
@@ -16,8 +16,13 @@ function main(useNoble: boolean = false) {
 		bluetoothAdapter: useNoble ? new NobleAdapter() : new ExampleAdapter(),
 	};
 	const gateway = new Gateway(configuration);
-	gateway.onDelete(() => {
+
+	gateway.on(GatewayEvent.Deleted, () => {
 		process.exit();
+	});
+
+	gateway.on(GatewayEvent.NameChanged, (newName: string) => {
+		console.log(`Gateway name changed to ${newName}`);
 	});
 }
 

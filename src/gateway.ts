@@ -1,6 +1,16 @@
-import * as awsIot from "aws-iot-device-sdk";
+import * as awsIot from 'aws-iot-device-sdk';
+import { EventEmitter } from 'events';
+
 import { BluetoothAdapter } from './bluetoothAdapter';
 import { DeviceScanResult } from './interfaces/scanResult';
+import { arrayDeepEquals } from './utils';
+
+export enum GatewayEvent {
+	NameChanged = 'NAME_CHANGED',
+	Deleted = 'GATEWAY_DELTED',
+	DeviceRemoved = 'DEVICE_REMOVED',
+	ConnectionsChanged = 'CONNECTIONS_CHANGED',
+}
 
 export type GatewayConfiguration = {
 	keyPath?: string;
@@ -13,7 +23,7 @@ export type GatewayConfiguration = {
 	bluetoothAdapter: BluetoothAdapter;
 }
 
-export class Gateway {
+export class Gateway extends EventEmitter {
 	readonly keyPath: string;
 	readonly certPath: string;
 	readonly caPath: string;
@@ -24,7 +34,7 @@ export class Gateway {
 	readonly gatewayDevice: awsIot.device;
 	readonly bluetoothAdapter: BluetoothAdapter;
 
-	deleteHandler;
+	private deviceConnections: string[] = [];
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
@@ -47,6 +57,7 @@ export class Gateway {
 	}
 
 	constructor(config: GatewayConfiguration) {
+		super();
 		console.info('got config object', config);
 		this.keyPath = config.keyPath;
 		this.certPath = config.certPath;
@@ -81,17 +92,13 @@ export class Gateway {
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
 	}
 
-	onDelete(handler: () => void) {
-		this.deleteHandler = handler;
-	}
-
 	private handleMessage(topic: string, payload) {
 		const message = JSON.parse(payload);
 		if (topic === this.c2gTopic) {
 			this.handleC2GMessage(message);
 		}
 
-		if (topic.indexOf(this.shadowTopic) === 0) {
+		if (topic.startsWith(this.shadowTopic)) {
 			this.handleShadowMessage(message);
 		}
 	}
@@ -120,15 +127,29 @@ export class Gateway {
 				break;
 			case 'delete_yourself': //User has deleted this gateway from their account
 				console.log('Gateway has been deleted');
-				if (typeof this.deleteHandler === 'function') {
-					this.deleteHandler();
-				}
+				this.emit(GatewayEvent.Deleted);
 				break;
 		}
 	}
 
 	private handleShadowMessage(message) {
 		console.log('got shadow message', JSON.stringify(message));
+
+		const newState = message.state && message.state.desired;
+		if (!newState) {
+			return;
+		}
+
+		if (newState.desiredConnections) {
+			console.log('desiredconnections are', newState.desiredConnections[0]);
+		}
+
+		if (newState.name) {
+			this.emit(GatewayEvent.NameChanged, newState.name);
+		}
+
+		if (newState.beacons) {
+		}
 	}
 
 	private handleError(error) {
@@ -181,6 +202,65 @@ export class Gateway {
 		const message = JSON.stringify(event);
 
 		this.gatewayDevice.publish(topic, message);
+	}
+
+	private async updateDeviceConnections(connections) {
+		const existingConnections = [...this.deviceConnections];
+		const connectionsToAdd = connections.filter((id: string) => existingConnections.indexOf(id) < 0);
+		const connectionsToRemove = existingConnections.filter((id: string) => connections.indexOf(id) < 0);
+
+		for (const connectionToRemove of connectionsToRemove) {
+			try {
+				await this.bluetoothAdapter.disconnect(connectionToRemove);
+			}
+			catch (error) {
+				console.error('error', `Error removing connection to device ${error instanceof Object ? JSON.stringify(error) : error}`);
+			}
+			finally {
+				const removedIndex = this.deviceConnections.indexOf(connectionToRemove);
+				if (removedIndex > -1) {
+					this.deviceConnections.splice(removedIndex, 1);
+					this.emit(GatewayEvent.DeviceRemoved, connectionToRemove);
+				}
+			}
+		}
+
+		for (const connectionToAdd of connectionsToAdd) {
+			if (existingConnections.indexOf(connectionToAdd) < 0) {
+				this.deviceConnections.push(connectionToAdd);
+			}
+		}
+
+		if (!arrayDeepEquals(this.deviceConnections, existingConnections)) {
+			this.reportConnections();
+		}
+	}
+
+	private reportConnections() {
+		const statusConnections = this.getStatusConnections();
+		const shadowUpdate = {
+			state: {
+				reported: {
+					statusConnections,
+				},
+			},
+		};
+
+		this.publish(`${this.shadowTopic}/update`, shadowUpdate);
+		this.emit(GatewayEvent.ConnectionsChanged, statusConnections);
+	}
+
+	private getStatusConnections() {
+		const statusConnections = {};
+		for (const connection of this.deviceConnections) {
+			statusConnections[connection] = {
+				id: connection,
+				status: {
+					connected: true,
+				},
+			};
+		}
+		return statusConnections;
 	}
 
 }

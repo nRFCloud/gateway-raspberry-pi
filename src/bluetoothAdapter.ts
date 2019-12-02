@@ -1,6 +1,13 @@
+import { EventEmitter } from 'events';
+
 import { DeviceScanResult } from './interfaces/scanResult';
 
-export abstract class BluetoothAdapter {
+export enum AdapterEvent {
+	DeviceDisconnected = 'DEVICE_DISCONNECTED',
+	DeviceConnected = 'DEVICE_CONNECTED',
+}
+
+export abstract class BluetoothAdapter extends EventEmitter {
 
 	/**
 	 *
@@ -21,4 +28,16 @@ export abstract class BluetoothAdapter {
 		filter: {rssi?: number, name?: string},
 		resultCallback: (deviceScanResult: DeviceScanResult, timedout?: boolean) => void,
 	);
+
+	/**
+	 * Connect to a BLE device. The adapter is responsible for reporting connection status by emitting the appropriate events
+	 * @param id Device ID to connect to
+	 */
+	abstract connect(id: string): Promise<any>;
+
+	/**
+	 * Disconnect (remove) device connection
+	 * @param id Device ID to disconnect from
+	 */
+	abstract disconnect(id: string): Promise<any>;
 }
