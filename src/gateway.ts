@@ -141,7 +141,7 @@ export class Gateway extends EventEmitter {
 		}
 
 		if (newState.desiredConnections) {
-			console.log('desiredconnections are', newState.desiredConnections[0]);
+			this.updateDeviceConnections(newState.desiredConnections);
 		}
 
 		if (newState.name) {
