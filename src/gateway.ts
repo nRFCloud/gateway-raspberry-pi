@@ -147,15 +147,17 @@ export class Gateway extends EventEmitter {
 	}
 
 	private handleShadowMessage(message) {
-		console.log('got shadow message', JSON.stringify(message));
+		if (!message.state) {
+			return;
+		}
 
-		const newState = message.state && message.state.desired;
+		const newState = message.state.desired || message.state;
 		if (!newState) {
 			return;
 		}
 
 		if (newState.desiredConnections) {
-			this.updateDeviceConnections(newState.desiredConnections);
+			this.updateDeviceConnections(newState.desiredConnections.map((conn) => conn.id));
 		}
 
 		if (newState.name) {
@@ -218,7 +220,7 @@ export class Gateway extends EventEmitter {
 		this.gatewayDevice.publish(topic, message);
 	}
 
-	private async updateDeviceConnections(connections) {
+	private async updateDeviceConnections(connections: string[]) {
 		const existingConnections = {...this.deviceConnections};
 		const deviceIds = Object.keys(existingConnections);
 		const connectionsToAdd = connections.filter((id: string) => deviceIds.indexOf(id) < 0);
@@ -290,7 +292,8 @@ export class Gateway extends EventEmitter {
 		if (this.isTryingConnection) {
 			return;
 		}
-		const connections = Object.keys(this.deviceConnections).filter((deviceId) => this.deviceConnections[deviceId]);
+
+		const connections = Object.keys(this.deviceConnections).filter((deviceId) => !this.deviceConnections[deviceId]);
 		if (connections.length < 1) { //everything is already connected
 			return;
 		}

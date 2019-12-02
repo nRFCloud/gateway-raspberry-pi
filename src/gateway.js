@@ -202,13 +202,15 @@ var Gateway = (function (_super) {
         }
     };
     Gateway.prototype.handleShadowMessage = function (message) {
-        console.log('got shadow message', JSON.stringify(message));
-        var newState = message.state && message.state.desired;
+        if (!message.state) {
+            return;
+        }
+        var newState = message.state.desired || message.state;
         if (!newState) {
             return;
         }
         if (newState.desiredConnections) {
-            this.updateDeviceConnections(newState.desiredConnections);
+            this.updateDeviceConnections(newState.desiredConnections.map(function (conn) { return conn.id; }));
         }
         if (newState.name) {
             this.emit(GatewayEvent.NameChanged, newState.name);
@@ -347,7 +349,7 @@ var Gateway = (function (_super) {
                         if (this.isTryingConnection) {
                             return [2];
                         }
-                        connections = Object.keys(this.deviceConnections).filter(function (deviceId) { return _this.deviceConnections[deviceId]; });
+                        connections = Object.keys(this.deviceConnections).filter(function (deviceId) { return !_this.deviceConnections[deviceId]; });
                         if (connections.length < 1) {
                             return [2];
                         }
