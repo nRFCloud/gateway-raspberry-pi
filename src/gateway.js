@@ -101,12 +101,12 @@ var Gateway = (function (_super) {
         _this.bluetoothAdapter = config.bluetoothAdapter;
         _this.bluetoothAdapter.on(bluetoothAdapter_1.AdapterEvent.DeviceConnected, function (deviceId) {
             _this.deviceConnections[deviceId] = true;
-            _this.reportConnections();
+            _this.reportConnectionUp(deviceId);
         });
         _this.bluetoothAdapter.on(bluetoothAdapter_1.AdapterEvent.DeviceDisconnected, function (deviceId) {
             if (typeof _this.deviceConnections[deviceId] !== 'undefined') {
                 _this.deviceConnections[deviceId] = false;
-                _this.reportConnections();
+                _this.reportConnectionDown(deviceId);
             }
         });
         _this.gatewayDevice = new awsIot.device({
@@ -238,7 +238,6 @@ var Gateway = (function (_super) {
         var scanEvent = {
             type: 'scan_result',
             subType: 'instant',
-            timestamp: new Date().toISOString(),
             devices: result ? [result] : [],
             timeout: timeout,
         };
@@ -246,6 +245,9 @@ var Gateway = (function (_super) {
         this.publish(this.g2cTopic, g2cEvent);
     };
     Gateway.prototype.getG2CEvent = function (event) {
+        if (!event.timestamp) {
+            event.timestamp = new Date().toISOString();
+        }
         return {
             type: 'event',
             gatewayId: this.gatewayId,
@@ -388,6 +390,34 @@ var Gateway = (function (_super) {
     Gateway.prototype.stopDeviceConnections = function () {
         clearInterval(this.deviceConnectionIntervalHolder);
         this.deviceConnectionIntervalHolder = null;
+    };
+    Gateway.prototype.reportConnectionUp = function (deviceId) {
+        var connectionUpEvent = {
+            type: 'device_connect_result',
+            device: this.buildDeviceObjectForEvent(deviceId),
+        };
+        var g2cEvent = this.getG2CEvent(connectionUpEvent);
+        this.publish(this.g2cTopic, g2cEvent);
+    };
+    Gateway.prototype.reportConnectionDown = function (deviceId) {
+        var connectionUpEvent = {
+            type: 'device_disconnect',
+            device: this.buildDeviceObjectForEvent(deviceId),
+        };
+        var g2cEvent = this.getG2CEvent(connectionUpEvent);
+        this.publish(this.g2cTopic, g2cEvent);
+    };
+    Gateway.prototype.buildDeviceObjectForEvent = function (deviceId) {
+        return {
+            address: {
+                address: deviceId,
+                type: 'randomStatic',
+            },
+            id: deviceId,
+            status: {
+                connected: false,
+            },
+        };
     };
     return Gateway;
 }(events_1.EventEmitter));

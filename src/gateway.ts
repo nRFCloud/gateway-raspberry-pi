@@ -4,6 +4,7 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { DeviceScanResult } from './interfaces/scanResult';
+import { Device } from './interfaces/device';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -73,12 +74,12 @@ export class Gateway extends EventEmitter {
 
 		this.bluetoothAdapter.on(AdapterEvent.DeviceConnected, (deviceId) => {
 			this.deviceConnections[deviceId] = true;
-			this.reportConnections();
+			this.reportConnectionUp(deviceId);
 		});
 		this.bluetoothAdapter.on(AdapterEvent.DeviceDisconnected, (deviceId) => {
 			if (typeof this.deviceConnections[deviceId] !== 'undefined') {
 				this.deviceConnections[deviceId] = false;
-				this.reportConnections();
+				this.reportConnectionDown(deviceId);
 			}
 		});
 
@@ -196,7 +197,6 @@ export class Gateway extends EventEmitter {
 		const scanEvent = {
 			type: 'scan_result',
 			subType: 'instant',
-			timestamp: new Date().toISOString(),
 			devices: result ? [result] : [],
 			timeout,
 		};
@@ -205,6 +205,9 @@ export class Gateway extends EventEmitter {
 	}
 
 	private getG2CEvent(event) {
+		if (!event.timestamp) {
+			event.timestamp = new Date().toISOString();
+		}
 		return {
 			type: 'event',
 			gatewayId: this.gatewayId,
@@ -325,4 +328,34 @@ export class Gateway extends EventEmitter {
 		this.deviceConnectionIntervalHolder = null;
 	}
 
+	private reportConnectionUp(deviceId: string) {
+		const connectionUpEvent = {
+			type: 'device_connect_result',
+			device: this.buildDeviceObjectForEvent(deviceId),
+		};
+		const g2cEvent = this.getG2CEvent(connectionUpEvent);
+		this.publish(this.g2cTopic, g2cEvent);
+	}
+
+	private reportConnectionDown(deviceId: string) {
+		const connectionUpEvent = {
+			type: 'device_disconnect',
+			device: this.buildDeviceObjectForEvent(deviceId),
+		};
+		const g2cEvent = this.getG2CEvent(connectionUpEvent);
+		this.publish(this.g2cTopic, g2cEvent);
+	}
+
+	private buildDeviceObjectForEvent(deviceId: string) {
+		return {
+			address: {
+				address: deviceId,
+				type: 'randomStatic',
+			},
+			id: deviceId,
+			status: {
+				connected: false,
+			},
+		};
+	}
 }
