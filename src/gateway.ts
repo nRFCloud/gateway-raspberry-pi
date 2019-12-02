@@ -1,9 +1,9 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { EventEmitter } from 'events';
+import isEqual from 'lodash/isEqual';
 
-import { BluetoothAdapter } from './bluetoothAdapter';
+import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { arrayDeepEquals } from './utils';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -34,7 +34,10 @@ export class Gateway extends EventEmitter {
 	readonly gatewayDevice: awsIot.device;
 	readonly bluetoothAdapter: BluetoothAdapter;
 
-	private deviceConnections: string[] = [];
+	private deviceConnections = {};
+	private deviceConnectionIntervalHolder = null;
+	private isTryingConnection: boolean = false;
+	private lastTriedAddress: string = null;
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
@@ -67,6 +70,17 @@ export class Gateway extends EventEmitter {
 		this.stage = config.stage;
 		this.tenantId = config.tenantId;
 		this.bluetoothAdapter = config.bluetoothAdapter;
+
+		this.bluetoothAdapter.on(AdapterEvent.DeviceConnected, (deviceId) => {
+			this.deviceConnections[deviceId] = true;
+			this.reportConnections();
+		});
+		this.bluetoothAdapter.on(AdapterEvent.DeviceDisconnected, (deviceId) => {
+			if (typeof this.deviceConnections[deviceId] !== 'undefined') {
+				this.deviceConnections[deviceId] = false;
+				this.reportConnections();
+			}
+		});
 
 		this.gatewayDevice = new awsIot.device({
 			keyPath: this.keyPath,
@@ -205,9 +219,10 @@ export class Gateway extends EventEmitter {
 	}
 
 	private async updateDeviceConnections(connections) {
-		const existingConnections = [...this.deviceConnections];
-		const connectionsToAdd = connections.filter((id: string) => existingConnections.indexOf(id) < 0);
-		const connectionsToRemove = existingConnections.filter((id: string) => connections.indexOf(id) < 0);
+		const existingConnections = {...this.deviceConnections};
+		const deviceIds = Object.keys(existingConnections);
+		const connectionsToAdd = connections.filter((id: string) => deviceIds.indexOf(id) < 0);
+		const connectionsToRemove = deviceIds.filter((id: string) => connections.indexOf(id) < 0);
 
 		for (const connectionToRemove of connectionsToRemove) {
 			try {
@@ -217,29 +232,22 @@ export class Gateway extends EventEmitter {
 				console.error('error', `Error removing connection to device ${error instanceof Object ? JSON.stringify(error) : error}`);
 			}
 			finally {
-				const removedIndex = this.deviceConnections.indexOf(connectionToRemove);
-				if (removedIndex > -1) {
-					this.deviceConnections.splice(removedIndex, 1);
+				if (typeof this.deviceConnections[connectionToRemove] !== 'undefined') {
+					delete this.deviceConnections[connectionToRemove];
 					this.emit(GatewayEvent.DeviceRemoved, connectionToRemove);
 				}
 			}
 		}
 
 		for (const connectionToAdd of connectionsToAdd) {
-			if (existingConnections.indexOf(connectionToAdd) < 0) {
-				this.deviceConnections.push(connectionToAdd);
+			if (deviceIds.indexOf(connectionToAdd) < 0) {
+				this.deviceConnections[connectionToAdd] = false;
 			}
 		}
 
-		for (const connection of this.deviceConnections) {
-			try {
-				await this.bluetoothAdapter.connect(connection);
-			} catch (err) {
-				console.error('Error connecting', err);
-			}
-		}
+		this.startDeviceConnections();
 
-		if (!arrayDeepEquals(this.deviceConnections, existingConnections)) {
+		if (!isEqual(this.deviceConnections, existingConnections)) {
 			this.reportConnections();
 		}
 	}
@@ -260,15 +268,58 @@ export class Gateway extends EventEmitter {
 
 	private getStatusConnections() {
 		const statusConnections = {};
-		for (const connection of this.deviceConnections) {
+		for (const connection of Object.keys(this.deviceConnections)) {
 			statusConnections[connection] = {
 				id: connection,
 				status: {
-					connected: true,
+					connected: this.deviceConnections[connection],
 				},
 			};
 		}
 		return statusConnections;
+	}
+
+	private startDeviceConnections() {
+		if (this.deviceConnectionIntervalHolder === null) {
+			this.deviceConnectionIntervalHolder = setInterval(() => this.initiateNextConnection(), 1000);
+		}
+	}
+
+	//Try to initiate the next connection on the list
+	private async initiateNextConnection() {
+		if (this.isTryingConnection) {
+			return;
+		}
+		const connections = Object.keys(this.deviceConnections).filter((deviceId) => this.deviceConnections[deviceId]);
+		if (connections.length < 1) { //everything is already connected
+			return;
+		}
+
+		let nextAddressToTry;
+		if (!this.lastTriedAddress || connections.indexOf(this.lastTriedAddress) < 0) {
+			nextAddressToTry = connections[0];
+		} else {
+			const indexOf = connections.indexOf(this.lastTriedAddress);
+			if (indexOf + 1 >= connections.length) {
+				nextAddressToTry = connections[0];
+			} else {
+				nextAddressToTry = connections[indexOf + 1];
+			}
+		}
+
+		try {
+			this.isTryingConnection = true;
+			await this.bluetoothAdapter.connect(nextAddressToTry);
+		} catch (error) {
+		} finally {
+			this.lastTriedAddress = nextAddressToTry;
+			this.isTryingConnection = false;
+		}
+	}
+
+	private stopDeviceConnections() {
+		clearInterval(this.deviceConnectionIntervalHolder);
+		this.deviceConnectionIntervalHolder = null;
 	}
 
 }

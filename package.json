@@ -31,7 +31,8 @@
 		"@types/aws-iot-device-sdk": "^2.2.0",
 		"@types/noble": "0.0.39",
 		"aws-iot-device-sdk": "^2.2.1",
-		"dotenv": "^8.2.0"
+		"dotenv": "^8.2.0",
+		"lodash": "^4.17.15"
 	},
 	"devDependencies": {
 		"ts-node": "^8.5.2",

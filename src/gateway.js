@@ -12,6 +12,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -48,13 +59,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -62,10 +66,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var awsIot = __importStar(require("aws-iot-device-sdk"));
 var events_1 = require("events");
-var utils_1 = require("./utils");
+var isEqual_1 = __importDefault(require("lodash/isEqual"));
+var bluetoothAdapter_1 = require("./bluetoothAdapter");
 var GatewayEvent;
 (function (GatewayEvent) {
     GatewayEvent["NameChanged"] = "NAME_CHANGED";
@@ -77,7 +85,10 @@ var Gateway = (function (_super) {
     __extends(Gateway, _super);
     function Gateway(config) {
         var _this = _super.call(this) || this;
-        _this.deviceConnections = [];
+        _this.deviceConnections = {};
+        _this.deviceConnectionIntervalHolder = null;
+        _this.isTryingConnection = false;
+        _this.lastTriedAddress = null;
         _this.messageId = 0;
         console.info('got config object', config);
         _this.keyPath = config.keyPath;
@@ -88,6 +99,16 @@ var Gateway = (function (_super) {
         _this.stage = config.stage;
         _this.tenantId = config.tenantId;
         _this.bluetoothAdapter = config.bluetoothAdapter;
+        _this.bluetoothAdapter.on(bluetoothAdapter_1.AdapterEvent.DeviceConnected, function (deviceId) {
+            _this.deviceConnections[deviceId] = true;
+            _this.reportConnections();
+        });
+        _this.bluetoothAdapter.on(bluetoothAdapter_1.AdapterEvent.DeviceDisconnected, function (deviceId) {
+            if (typeof _this.deviceConnections[deviceId] !== 'undefined') {
+                _this.deviceConnections[deviceId] = false;
+                _this.reportConnections();
+            }
+        });
         _this.gatewayDevice = new awsIot.device({
             keyPath: _this.keyPath,
             certPath: _this.certPath,
@@ -236,33 +257,33 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.updateDeviceConnections = function (connections) {
         return __awaiter(this, void 0, void 0, function () {
-            var existingConnections, connectionsToAdd, connectionsToRemove, _i, connectionsToRemove_1, connectionToRemove, error_1, removedIndex, _a, connectionsToAdd_1, connectionToAdd, _b, _c, connection, err_1;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var existingConnections, deviceIds, connectionsToAdd, connectionsToRemove, _i, connectionsToRemove_1, connectionToRemove, error_1, _a, connectionsToAdd_1, connectionToAdd;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        existingConnections = __spreadArrays(this.deviceConnections);
-                        connectionsToAdd = connections.filter(function (id) { return existingConnections.indexOf(id) < 0; });
-                        connectionsToRemove = existingConnections.filter(function (id) { return connections.indexOf(id) < 0; });
+                        existingConnections = __assign({}, this.deviceConnections);
+                        deviceIds = Object.keys(existingConnections);
+                        connectionsToAdd = connections.filter(function (id) { return deviceIds.indexOf(id) < 0; });
+                        connectionsToRemove = deviceIds.filter(function (id) { return connections.indexOf(id) < 0; });
                         _i = 0, connectionsToRemove_1 = connectionsToRemove;
-                        _d.label = 1;
+                        _b.label = 1;
                     case 1:
                         if (!(_i < connectionsToRemove_1.length)) return [3, 7];
                         connectionToRemove = connectionsToRemove_1[_i];
-                        _d.label = 2;
+                        _b.label = 2;
                     case 2:
-                        _d.trys.push([2, 4, 5, 6]);
+                        _b.trys.push([2, 4, 5, 6]);
                         return [4, this.bluetoothAdapter.disconnect(connectionToRemove)];
                     case 3:
-                        _d.sent();
+                        _b.sent();
                         return [3, 6];
                     case 4:
-                        error_1 = _d.sent();
+                        error_1 = _b.sent();
                         console.error('error', "Error removing connection to device " + (error_1 instanceof Object ? JSON.stringify(error_1) : error_1));
                         return [3, 6];
                     case 5:
-                        removedIndex = this.deviceConnections.indexOf(connectionToRemove);
-                        if (removedIndex > -1) {
-                            this.deviceConnections.splice(removedIndex, 1);
+                        if (typeof this.deviceConnections[connectionToRemove] !== 'undefined') {
+                            delete this.deviceConnections[connectionToRemove];
                             this.emit(GatewayEvent.DeviceRemoved, connectionToRemove);
                         }
                         return [7];
@@ -272,31 +293,12 @@ var Gateway = (function (_super) {
                     case 7:
                         for (_a = 0, connectionsToAdd_1 = connectionsToAdd; _a < connectionsToAdd_1.length; _a++) {
                             connectionToAdd = connectionsToAdd_1[_a];
-                            if (existingConnections.indexOf(connectionToAdd) < 0) {
-                                this.deviceConnections.push(connectionToAdd);
+                            if (deviceIds.indexOf(connectionToAdd) < 0) {
+                                this.deviceConnections[connectionToAdd] = false;
                             }
                         }
-                        _b = 0, _c = this.deviceConnections;
-                        _d.label = 8;
-                    case 8:
-                        if (!(_b < _c.length)) return [3, 13];
-                        connection = _c[_b];
-                        _d.label = 9;
-                    case 9:
-                        _d.trys.push([9, 11, , 12]);
-                        return [4, this.bluetoothAdapter.connect(connection)];
-                    case 10:
-                        _d.sent();
-                        return [3, 12];
-                    case 11:
-                        err_1 = _d.sent();
-                        console.error('Error connecting', err_1);
-                        return [3, 12];
-                    case 12:
-                        _b++;
-                        return [3, 8];
-                    case 13:
-                        if (!utils_1.arrayDeepEquals(this.deviceConnections, existingConnections)) {
+                        this.startDeviceConnections();
+                        if (!isEqual_1.default(this.deviceConnections, existingConnections)) {
                             this.reportConnections();
                         }
                         return [2];
@@ -318,16 +320,72 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.getStatusConnections = function () {
         var statusConnections = {};
-        for (var _i = 0, _a = this.deviceConnections; _i < _a.length; _i++) {
+        for (var _i = 0, _a = Object.keys(this.deviceConnections); _i < _a.length; _i++) {
             var connection = _a[_i];
             statusConnections[connection] = {
                 id: connection,
                 status: {
-                    connected: true,
+                    connected: this.deviceConnections[connection],
                 },
             };
         }
         return statusConnections;
+    };
+    Gateway.prototype.startDeviceConnections = function () {
+        var _this = this;
+        if (this.deviceConnectionIntervalHolder === null) {
+            this.deviceConnectionIntervalHolder = setInterval(function () { return _this.initiateNextConnection(); }, 1000);
+        }
+    };
+    Gateway.prototype.initiateNextConnection = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var connections, nextAddressToTry, indexOf, error_2;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (this.isTryingConnection) {
+                            return [2];
+                        }
+                        connections = Object.keys(this.deviceConnections).filter(function (deviceId) { return _this.deviceConnections[deviceId]; });
+                        if (connections.length < 1) {
+                            return [2];
+                        }
+                        if (!this.lastTriedAddress || connections.indexOf(this.lastTriedAddress) < 0) {
+                            nextAddressToTry = connections[0];
+                        }
+                        else {
+                            indexOf = connections.indexOf(this.lastTriedAddress);
+                            if (indexOf + 1 >= connections.length) {
+                                nextAddressToTry = connections[0];
+                            }
+                            else {
+                                nextAddressToTry = connections[indexOf + 1];
+                            }
+                        }
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, 4, 5]);
+                        this.isTryingConnection = true;
+                        return [4, this.bluetoothAdapter.connect(nextAddressToTry)];
+                    case 2:
+                        _a.sent();
+                        return [3, 5];
+                    case 3:
+                        error_2 = _a.sent();
+                        return [3, 5];
+                    case 4:
+                        this.lastTriedAddress = nextAddressToTry;
+                        this.isTryingConnection = false;
+                        return [7];
+                    case 5: return [2];
+                }
+            });
+        });
+    };
+    Gateway.prototype.stopDeviceConnections = function () {
+        clearInterval(this.deviceConnectionIntervalHolder);
+        this.deviceConnectionIntervalHolder = null;
     };
     return Gateway;
 }(events_1.EventEmitter));
