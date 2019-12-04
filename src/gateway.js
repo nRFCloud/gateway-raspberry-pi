@@ -392,6 +392,7 @@ var Gateway = (function (_super) {
         this.deviceConnectionIntervalHolder = null;
     };
     Gateway.prototype.reportConnectionUp = function (deviceId) {
+        this.reportConnections();
         var connectionUpEvent = {
             type: 'device_connect_result',
             device: this.buildDeviceObjectForEvent(deviceId),
@@ -400,6 +401,7 @@ var Gateway = (function (_super) {
         this.publish(this.g2cTopic, g2cEvent);
     };
     Gateway.prototype.reportConnectionDown = function (deviceId) {
+        this.reportConnections();
         var connectionUpEvent = {
             type: 'device_disconnect',
             device: this.buildDeviceObjectForEvent(deviceId),

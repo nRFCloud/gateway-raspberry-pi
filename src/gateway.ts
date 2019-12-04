@@ -329,6 +329,7 @@ export class Gateway extends EventEmitter {
 	}
 
 	private reportConnectionUp(deviceId: string) {
+		this.reportConnections();
 		const connectionUpEvent = {
 			type: 'device_connect_result',
 			device: this.buildDeviceObjectForEvent(deviceId),
@@ -338,6 +339,7 @@ export class Gateway extends EventEmitter {
 	}
 
 	private reportConnectionDown(deviceId: string) {
+		this.reportConnections();
 		const connectionUpEvent = {
 			type: 'device_disconnect',
 			device: this.buildDeviceObjectForEvent(deviceId),
