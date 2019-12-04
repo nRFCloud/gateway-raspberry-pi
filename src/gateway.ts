@@ -4,7 +4,6 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { Device } from './interfaces/device';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -356,7 +355,7 @@ export class Gateway extends EventEmitter {
 			},
 			id: deviceId,
 			status: {
-				connected: false,
+				connected: this.deviceConnections[deviceId],
 			},
 		};
 	}

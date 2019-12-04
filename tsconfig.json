@@ -20,7 +20,8 @@
 		"lib": [
 			"dom",
 			"es6"
-		]
+		],
+		"newLine": "lf"
 	},
 	"exclude": [
 		"node_modules",

@@ -417,7 +417,7 @@ var Gateway = (function (_super) {
             },
             id: deviceId,
             status: {
-                connected: false,
+                connected: this.deviceConnections[deviceId],
             },
         };
     };
