@@ -7,12 +7,10 @@ import { Address } from '../interfaces/device';
 import { Characteristic, CharacteristicProperties, Service } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
 
-function formatUUIDIfNecessary(uuid: string): string {
-	if (uuid.length === 32) {
-		return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
-	}
 
-	return uuid;
+//The frontend handles UUIDs as upper-case with no dashes, need to convert back to Noble version
+function formatUUIDIfNecessary(uuid: string): string {
+	return uuid.replace(/-/g, '').toLowerCase();
 }
 
 export class NobleAdapter extends BluetoothAdapter {
@@ -109,17 +107,20 @@ export class NobleAdapter extends BluetoothAdapter {
 		const services: NobleService[] = await this.discoverServices(id);
 
 		for (const service of services) {
+			try {
+				const characteristics = await this.discoverCharacteristics(id, service.uuid);
 
-			const characteristics = await this.discoverCharacteristics(id, service.uuid);
+				const converted = this.convertService(service);
+				converted.characteristics = [];
+				for (const characteristic of characteristics) {
 
-			const converted = this.convertService(service);
-			converted.characteristics = [];
-			for (const characteristic of characteristics) {
-
-				const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
-				convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
+					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
+					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
+				}
+				returned.push(converted);
+			} catch (err) {
+				console.error('Error discovering characteristics', err);
 			}
-			returned.push(converted);
 		}
 
 		return returned;
