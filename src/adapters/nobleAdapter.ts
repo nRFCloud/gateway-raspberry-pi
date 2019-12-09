@@ -178,6 +178,7 @@ export class NobleAdapter extends BluetoothAdapter {
 			return new Promise<NobleCharacteristic[]>((resolve, reject) => {
 				service.discoverCharacteristics(uuids.map((uuid) => formatUUIDIfNecessary(uuid)), (error, characteristics) => {
 					if (error) {
+						console.info('error discover char', serviceUuid, error);
 						reject(error);
 					} else {
 						resolve(characteristics);
