@@ -116,6 +116,7 @@ export class NobleAdapter extends BluetoothAdapter {
 
 					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
 					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
+					converted.characteristics.push(convertedCharacteristic);
 				}
 				returned.push(converted);
 			} catch (err) {
