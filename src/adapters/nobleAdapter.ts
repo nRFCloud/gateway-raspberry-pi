@@ -110,16 +110,7 @@ export class NobleAdapter extends BluetoothAdapter {
 
 		for (const service of services) {
 
-			const characteristics = await new Promise<NobleCharacteristic[]>((resolve, reject) => {
-				service.discoverCharacteristics([], (error, characteristics) => {
-					if(error) {
-						reject(error);
-					} else {
-						resolve(characteristics);
-					}
-				});
-			});
-
+			const characteristics = await this.discoverCharacteristics(id, service.uuid);
 
 			const converted = this.convertService(service);
 			converted.characteristics = [];
@@ -169,6 +160,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		const device = await this.getEntryForId(deviceId);
 		return new Promise<NobleService[]>((resolve, reject) => {
 			device.discoverServices(serviceUUIDs.map((uuid) => formatUUIDIfNecessary(uuid)), (error, services) => {
+				console.log('discovered services', services);
 				if (error) {
 					reject(error);
 				} else {
@@ -184,6 +176,7 @@ export class NobleAdapter extends BluetoothAdapter {
 			const service = services[0];
 			return new Promise<NobleCharacteristic[]>((resolve, reject) => {
 				service.discoverCharacteristics(uuids.map((uuid) => formatUUIDIfNecessary(uuid)), (error, characteristics) => {
+					console.log('discovered chars', characteristics);
 					if (error) {
 						reject(error);
 					} else {
