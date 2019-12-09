@@ -3,7 +3,8 @@ import { EventEmitter } from 'events';
 import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
-import { DeviceScanResult } from './interfaces/scanResult';
+import { MqttFacade } from './mqttFacade';
+import { Service } from './interfaces/bluetooth';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -33,11 +34,14 @@ export class Gateway extends EventEmitter {
 	readonly tenantId: string;
 	readonly gatewayDevice: awsIot.device;
 	readonly bluetoothAdapter: BluetoothAdapter;
+	readonly mqttFacade: MqttFacade;
 
 	private deviceConnections = {};
 	private deviceConnectionIntervalHolder = null;
 	private isTryingConnection: boolean = false;
 	private lastTriedAddress: string = null;
+
+	private discoveryCache: {[key: string]: Service[]} = {};
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
@@ -104,6 +108,8 @@ export class Gateway extends EventEmitter {
 		this.gatewayDevice.subscribe(this.c2gTopic);
 		this.gatewayDevice.subscribe(`${this.shadowGetTopic}/accepted`);
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
+
+		this.mqttFacade = new MqttFacade(this.gatewayDevice, this.g2cTopic);
 	}
 
 	private handleMessage(topic: string, payload) {
@@ -128,6 +134,9 @@ export class Gateway extends EventEmitter {
 				this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
 				break;
 			case 'device_discover': //Do a discover AND full value read
+				if (op.deviceAddress) {
+					this.doDiscover(op.deviceAddress);
+				}
 				break;
 			case 'device_characteristic_value_read': //Read a characteristic
 				break;
@@ -172,6 +181,14 @@ export class Gateway extends EventEmitter {
 		console.error('Error from MQTT', error);
 	}
 
+	private async doDiscover(deviceAddress: string) {
+		if (typeof this.discoveryCache[deviceAddress] === 'undefined') {
+			this.discoveryCache[deviceAddress] = await this.bluetoothAdapter.discover(deviceAddress);
+		}
+
+		this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
+	}
+
 	/**
 	 *
 	 * @param scanTimeout When the scan should timeout, in seconds (default 3)
@@ -189,37 +206,7 @@ export class Gateway extends EventEmitter {
 		scanReporting: 'instant' | 'batch' = 'instant',
 		filter?: {rssi?: number, name?: string}
 	) {
-		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, (result, timedout = false) => this.handleScanResult(result, timedout));
-	}
-
-	private handleScanResult(result: DeviceScanResult, timeout: boolean = false) {
-		const scanEvent = {
-			type: 'scan_result',
-			subType: 'instant',
-			devices: result ? [result] : [],
-			timeout,
-		};
-		const g2cEvent = this.getG2CEvent(scanEvent);
-		this.publish(this.g2cTopic, g2cEvent);
-	}
-
-	private getG2CEvent(event) {
-		if (!event.timestamp) {
-			event.timestamp = new Date().toISOString();
-		}
-		return {
-			type: 'event',
-			gatewayId: this.gatewayId,
-			event,
-		};
-	}
-
-	messageId = 0;
-	private publish(topic: string, event) {
-		event.messageId = this.messageId++;
-		const message = JSON.stringify(event);
-
-		this.gatewayDevice.publish(topic, message);
+		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, (result, timedout = false) => this.mqttFacade.handleScanResult(result, timedout));
 	}
 
 	private async updateDeviceConnections(connections: string[]) {
@@ -258,15 +245,7 @@ export class Gateway extends EventEmitter {
 
 	private reportConnections() {
 		const statusConnections = this.getStatusConnections();
-		const shadowUpdate = {
-			state: {
-				reported: {
-					statusConnections,
-				},
-			},
-		};
-
-		this.publish(`${this.shadowTopic}/update`, shadowUpdate);
+		this.mqttFacade.reportConnections(statusConnections);
 		this.emit(GatewayEvent.ConnectionsChanged, statusConnections);
 	}
 
@@ -329,34 +308,11 @@ export class Gateway extends EventEmitter {
 
 	private reportConnectionUp(deviceId: string) {
 		this.reportConnections();
-		const connectionUpEvent = {
-			type: 'device_connect_result',
-			device: this.buildDeviceObjectForEvent(deviceId),
-		};
-		const g2cEvent = this.getG2CEvent(connectionUpEvent);
-		this.publish(this.g2cTopic, g2cEvent);
+		this.mqttFacade.reportConnectionUp(deviceId);
 	}
 
 	private reportConnectionDown(deviceId: string) {
 		this.reportConnections();
-		const connectionUpEvent = {
-			type: 'device_disconnect',
-			device: this.buildDeviceObjectForEvent(deviceId),
-		};
-		const g2cEvent = this.getG2CEvent(connectionUpEvent);
-		this.publish(this.g2cTopic, g2cEvent);
-	}
-
-	private buildDeviceObjectForEvent(deviceId: string) {
-		return {
-			address: {
-				address: deviceId,
-				type: 'randomStatic',
-			},
-			id: deviceId,
-			status: {
-				connected: this.deviceConnections[deviceId],
-			},
-		};
+		this.mqttFacade.reportConnectionDown(deviceId);
 	}
 }

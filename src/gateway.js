@@ -74,6 +74,7 @@ var awsIot = __importStar(require("aws-iot-device-sdk"));
 var events_1 = require("events");
 var isEqual_1 = __importDefault(require("lodash/isEqual"));
 var bluetoothAdapter_1 = require("./bluetoothAdapter");
+var mqttFacade_1 = require("./mqttFacade");
 var GatewayEvent;
 (function (GatewayEvent) {
     GatewayEvent["NameChanged"] = "NAME_CHANGED";
@@ -89,7 +90,7 @@ var Gateway = (function (_super) {
         _this.deviceConnectionIntervalHolder = null;
         _this.isTryingConnection = false;
         _this.lastTriedAddress = null;
-        _this.messageId = 0;
+        _this.discoveryCache = {};
         console.info('got config object', config);
         _this.keyPath = config.keyPath;
         _this.certPath = config.certPath;
@@ -127,6 +128,7 @@ var Gateway = (function (_super) {
         _this.gatewayDevice.subscribe(_this.c2gTopic);
         _this.gatewayDevice.subscribe(_this.shadowGetTopic + "/accepted");
         _this.gatewayDevice.subscribe(_this.shadowUpdateTopic);
+        _this.mqttFacade = new mqttFacade_1.MqttFacade(_this.gatewayDevice, _this.g2cTopic);
         return _this;
     }
     Object.defineProperty(Gateway.prototype, "c2gTopic", {
@@ -184,6 +186,9 @@ var Gateway = (function (_super) {
                 this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
                 break;
             case 'device_discover':
+                if (op.deviceAddress) {
+                    this.doDiscover(op.deviceAddress);
+                }
                 break;
             case 'device_characteristic_value_read':
                 break;
@@ -221,6 +226,26 @@ var Gateway = (function (_super) {
     Gateway.prototype.handleError = function (error) {
         console.error('Error from MQTT', error);
     };
+    Gateway.prototype.doDiscover = function (deviceAddress) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        if (!(typeof this.discoveryCache[deviceAddress] === 'undefined')) return [3, 2];
+                        _a = this.discoveryCache;
+                        _b = deviceAddress;
+                        return [4, this.bluetoothAdapter.discover(deviceAddress)];
+                    case 1:
+                        _a[_b] = _c.sent();
+                        _c.label = 2;
+                    case 2:
+                        this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
+                        return [2];
+                }
+            });
+        });
+    };
     Gateway.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
         var _this = this;
         if (scanTimeout === void 0) { scanTimeout = 3; }
@@ -230,34 +255,8 @@ var Gateway = (function (_super) {
         if (scanReporting === void 0) { scanReporting = 'instant'; }
         this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, function (result, timedout) {
             if (timedout === void 0) { timedout = false; }
-            return _this.handleScanResult(result, timedout);
+            return _this.mqttFacade.handleScanResult(result, timedout);
         });
-    };
-    Gateway.prototype.handleScanResult = function (result, timeout) {
-        if (timeout === void 0) { timeout = false; }
-        var scanEvent = {
-            type: 'scan_result',
-            subType: 'instant',
-            devices: result ? [result] : [],
-            timeout: timeout,
-        };
-        var g2cEvent = this.getG2CEvent(scanEvent);
-        this.publish(this.g2cTopic, g2cEvent);
-    };
-    Gateway.prototype.getG2CEvent = function (event) {
-        if (!event.timestamp) {
-            event.timestamp = new Date().toISOString();
-        }
-        return {
-            type: 'event',
-            gatewayId: this.gatewayId,
-            event: event,
-        };
-    };
-    Gateway.prototype.publish = function (topic, event) {
-        event.messageId = this.messageId++;
-        var message = JSON.stringify(event);
-        this.gatewayDevice.publish(topic, message);
     };
     Gateway.prototype.updateDeviceConnections = function (connections) {
         return __awaiter(this, void 0, void 0, function () {
@@ -312,14 +311,7 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.reportConnections = function () {
         var statusConnections = this.getStatusConnections();
-        var shadowUpdate = {
-            state: {
-                reported: {
-                    statusConnections: statusConnections,
-                },
-            },
-        };
-        this.publish(this.shadowTopic + "/update", shadowUpdate);
+        this.mqttFacade.reportConnections(statusConnections);
         this.emit(GatewayEvent.ConnectionsChanged, statusConnections);
     };
     Gateway.prototype.getStatusConnections = function () {
@@ -393,33 +385,11 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.reportConnectionUp = function (deviceId) {
         this.reportConnections();
-        var connectionUpEvent = {
-            type: 'device_connect_result',
-            device: this.buildDeviceObjectForEvent(deviceId),
-        };
-        var g2cEvent = this.getG2CEvent(connectionUpEvent);
-        this.publish(this.g2cTopic, g2cEvent);
+        this.mqttFacade.reportConnectionUp(deviceId);
     };
     Gateway.prototype.reportConnectionDown = function (deviceId) {
         this.reportConnections();
-        var connectionUpEvent = {
-            type: 'device_disconnect',
-            device: this.buildDeviceObjectForEvent(deviceId),
-        };
-        var g2cEvent = this.getG2CEvent(connectionUpEvent);
-        this.publish(this.g2cTopic, g2cEvent);
-    };
-    Gateway.prototype.buildDeviceObjectForEvent = function (deviceId) {
-        return {
-            address: {
-                address: deviceId,
-                type: 'randomStatic',
-            },
-            id: deviceId,
-            status: {
-                connected: this.deviceConnections[deviceId],
-            },
-        };
+        this.mqttFacade.reportConnectionDown(deviceId);
     };
     return Gateway;
 }(events_1.EventEmitter));

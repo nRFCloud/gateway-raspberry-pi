@@ -1,7 +1,9 @@
 import { BluetoothAdapter } from '../bluetoothAdapter';
 import { DeviceScanResult } from '../interfaces/scanResult';
+import { Characteristic, Service } from '../interfaces/bluetooth';
 
 export class ExampleAdapter extends BluetoothAdapter {
+
 	startScan(
 		scanTimeout: number,
 		scanMode: "active" | "passive",
@@ -33,6 +35,14 @@ export class ExampleAdapter extends BluetoothAdapter {
 	}
 
 	connect(id: string): Promise<any> {
+		return undefined;
+	}
+
+	discover(id: string): Promise<Service[]> {
+		return undefined;
+	}
+
+	readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]> {
 		return undefined;
 	}
 }

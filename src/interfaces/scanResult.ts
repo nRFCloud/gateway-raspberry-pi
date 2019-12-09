@@ -16,6 +16,6 @@ export class DeviceScanResult {
 	advertisementType: string;
 	deviceType: string = 'BLE';
 	address: Address;
-	serviceUUIDs: Array<string>;
+	serviceUUIDs: string[];
 	advertisementData: AdvertisementData;
 }
