@@ -7,6 +7,13 @@ import { Address } from '../interfaces/device';
 import { Characteristic, CharacteristicProperties, Descriptor, Service } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
 
+function formatUUIDIfNecessary(uuid) {
+	if (uuid.length === 32) {
+		return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
+	}
+	return uuid;
+}
+
 export class NobleAdapter extends BluetoothAdapter {
 
 	private peripheralEntries: {[key: string]: Peripheral} = {};
@@ -202,7 +209,7 @@ export class NobleAdapter extends BluetoothAdapter {
 	private async discoverServices(deviceId: string, serviceUUIDs: string[] = []): Promise<NobleService[]> {
 		const device = await this.getDeviceById(deviceId);
 		return new Promise<NobleService[]>((resolve, reject) => {
-			device.discoverServices(serviceUUIDs.map((uuid) => shortenUUID(uuid)), (error, services) => {
+			device.discoverServices(serviceUUIDs.map((uuid) => formatUUIDIfNecessary(uuid)), (error, services) => {
 
 				if (error) {
 					console.log('error discovering service', serviceUUIDs);
@@ -218,7 +225,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		const service = await this.getServiceByUUID(deviceId, serviceUuid);
 		if (service) {
 			return new Promise<NobleCharacteristic[]>((resolve, reject) => {
-				service.discoverCharacteristics(uuids.map((uuid) => shortenUUID(uuid)), (error, characteristics) => {
+				service.discoverCharacteristics(uuids.map((uuid) => formatUUIDIfNecessary(uuid)), (error, characteristics) => {
 					if (error) {
 						console.info('error discover char', serviceUuid, error);
 						reject(error);

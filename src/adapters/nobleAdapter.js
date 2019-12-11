@@ -58,7 +58,10 @@ var scanResult_1 = require("../interfaces/scanResult");
 var bluetooth_1 = require("../interfaces/bluetooth");
 var utils_1 = require("../utils");
 function formatUUIDIfNecessary(uuid) {
-    return uuid.replace(/-/g, '').toLowerCase();
+    if (uuid.length === 32) {
+        return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
+    }
+    return uuid;
 }
 var NobleAdapter = (function (_super) {
     __extends(NobleAdapter, _super);
@@ -166,7 +169,7 @@ var NobleAdapter = (function (_super) {
             var peripheral;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4, this.getEntryForId(id)];
+                    case 0: return [4, this.getDeviceById(id)];
                     case 1:
                         peripheral = _a.sent();
                         peripheral.disconnect();
@@ -182,7 +185,7 @@ var NobleAdapter = (function (_super) {
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4, this.getEntryForId(id)];
+                    case 0: return [4, this.getDeviceById(id)];
                     case 1:
                         peripheral = _a.sent();
                         if (['connected', 'connecting'].includes(peripheral.state)) {
@@ -283,7 +286,7 @@ var NobleAdapter = (function (_super) {
             });
         });
     };
-    NobleAdapter.prototype.getEntryForId = function (deviceId) {
+    NobleAdapter.prototype.getDeviceById = function (deviceId) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b;
             return __generator(this, function (_c) {
@@ -370,7 +373,7 @@ var NobleAdapter = (function (_super) {
             var device;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4, this.getEntryForId(deviceId)];
+                    case 0: return [4, this.getDeviceById(deviceId)];
                     case 1:
                         device = _a.sent();
                         return [2, new Promise(function (resolve, reject) {
@@ -391,16 +394,15 @@ var NobleAdapter = (function (_super) {
     NobleAdapter.prototype.discoverCharacteristics = function (deviceId, serviceUuid, uuids) {
         if (uuids === void 0) { uuids = []; }
         return __awaiter(this, void 0, void 0, function () {
-            var services, service_1;
+            var service;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4, this.discoverServices(deviceId, [serviceUuid])];
+                    case 0: return [4, this.getServiceByUUID(deviceId, serviceUuid)];
                     case 1:
-                        services = _a.sent();
-                        if (services.length > 0) {
-                            service_1 = services[0];
+                        service = _a.sent();
+                        if (service) {
                             return [2, new Promise(function (resolve, reject) {
-                                    service_1.discoverCharacteristics(uuids.map(function (uuid) { return formatUUIDIfNecessary(uuid); }), function (error, characteristics) {
+                                    service.discoverCharacteristics(uuids.map(function (uuid) { return formatUUIDIfNecessary(uuid); }), function (error, characteristics) {
                                         if (error) {
                                             console.info('error discover char', serviceUuid, error);
                                             reject(error);
@@ -418,16 +420,15 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.discoverDescriptors = function (deviceId, serviceUuid, characteristicUuid) {
         return __awaiter(this, void 0, void 0, function () {
-            var characteristics, char_1;
+            var characteristic;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4, this.discoverCharacteristics(deviceId, serviceUuid, [characteristicUuid])];
+                    case 0: return [4, this.getCharacteristicByUUID(deviceId, serviceUuid, characteristicUuid)];
                     case 1:
-                        characteristics = _a.sent();
-                        if (characteristics.length > 0) {
-                            char_1 = characteristics[0];
+                        characteristic = _a.sent();
+                        if (characteristic) {
                             return [2, new Promise(function (resolve, reject) {
-                                    char_1.discoverDescriptors(function (error, descriptors) {
+                                    characteristic.discoverDescriptors(function (error, descriptors) {
                                         if (error) {
                                             console.info('error discovering descriptors', serviceUuid, characteristicUuid, error);
                                             reject(error);
