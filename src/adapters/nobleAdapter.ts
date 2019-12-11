@@ -42,7 +42,7 @@ export class NobleAdapter extends BluetoothAdapter {
 			this.peripheralEntries[peripheral.address] = peripheral;
 			const device = new DeviceScanResult();
 			device.address = {
-				address: peripheral.address,
+				address: peripheral.address.toUpperCase(),
 				type: peripheral.addressType,
 			} as Address;
 			device.rssi = peripheral.rssi;

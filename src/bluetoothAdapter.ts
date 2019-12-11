@@ -51,11 +51,11 @@ export abstract class BluetoothAdapter extends EventEmitter {
 
 	/**
 	 * Reads a characteristic value from a device
-	 * @param id Device ID to read from
+	 * @param deviceId Device ID to read from
 	 * @param characteristic Characteristic to read
 	 * @returns number[] the value of the characteristic
 	 */
-	abstract readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]>;
+	abstract readCharacteristicValue(deviceId: string, characteristic: Characteristic): Promise<number[]>;
 
 	/**
 	 * Reads a descriptor value from a device
@@ -63,5 +63,5 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	 * @param descriptor Descriptor to read
 	 * @returns number[] the value of the descriptor
 	 */
-	abstract readDescriptorValue(id: string, descriptor: Descriptor): Promise<number[]>;
+	abstract readDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<number[]>;
 }

@@ -28,8 +28,12 @@ export class Characteristic {
 	properties: CharacteristicProperties;
 	path: string;
 
-	constructor(uuid: string) {
+	constructor(uuid: string, serviceUuid: string = null) {
 		this.uuid = uuid;
+
+		if (serviceUuid) {
+			this.path = `${serviceUuid}/${uuid}`;
+		}
 	}
 }
 

@@ -14,8 +14,12 @@ var CharacteristicProperties = (function () {
 }());
 exports.CharacteristicProperties = CharacteristicProperties;
 var Characteristic = (function () {
-    function Characteristic(uuid) {
+    function Characteristic(uuid, serviceUuid) {
+        if (serviceUuid === void 0) { serviceUuid = null; }
         this.uuid = uuid;
+        if (serviceUuid) {
+            this.path = serviceUuid + "/" + uuid;
+        }
     }
     return Characteristic;
 }());

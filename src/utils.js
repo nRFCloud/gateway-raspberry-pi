@@ -4,3 +4,7 @@ function shortenUUID(uuid) {
     return uuid.replace(/-/g, '').toUpperCase();
 }
 exports.shortenUUID = shortenUUID;
+function assumeType(x) {
+    return;
+}
+exports.assumeType = assumeType;

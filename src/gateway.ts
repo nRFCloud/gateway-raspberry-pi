@@ -4,7 +4,9 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
-import { Service } from './interfaces/bluetooth';
+import { Characteristic, Service } from './interfaces/bluetooth';
+import { C2GEventType, Message, ScanOperation } from './interfaces/c2g';
+import { assumeType } from './utils';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -123,32 +125,41 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
-	private handleC2GMessage(message) {
+
+	private handleC2GMessage(message: any) {
 		console.log('got g2c message', message);
 		if (!message || !message.type || !message.id || message.type !== 'operation' || !message.operation || !message.operation.type) {
 			throw new Error('Unknown message ' + JSON.stringify(message));
 		}
-		const op = message.operation;
+		let op = message.operation;
 		switch (op.type) {
-			case 'scan': //Do a bluetooth scan
+			case C2GEventType.Scan: //Do a bluetooth scan
+				assumeType<ScanOperation>(op);
 				this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
+
 				break;
-			case 'device_discover': //Do a discover AND full value read
+			case C2GEventType.PerformDiscover: //Do a discover AND full value read
 				if (op.deviceAddress) {
 					this.doDiscover(op.deviceAddress);
 				}
 				break;
-			case 'device_characteristic_value_read': //Read a characteristic
+			case C2GEventType.CharacteristicValueRead: //Read a characteristic
+				if (op.deviceAddress && op.serviceUUID && op.characteristicUUID) {
+					this.doCharacteristicRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID);
+				}
 				break;
-			case 'device_characteristic_value_write': //Write value to a characteristic
+			case C2GEventType.CharacteristicValueWrite: //Write value to a characteristic
+				if (op.deviceAddress && op.serviceUUID && op.characteristicUUID && op.characteristicValue) {
+					this.doCharacteristicWrite(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.characteristicValue);
+				}
 				break;
-			case 'device_descriptor_value_read': //Read a descriptor
+			case C2GEventType.DescriptorValueRead: //Read a descriptor
 				break;
-			case 'device_descriptor_value_write': //Write value to a descriptor
+			case C2GEventType.DescriptoValueWrite: //Write value to a descriptor
 				break;
-			case 'get_gateway_status': //Get information about the gateway
+			case C2GEventType.GatewayStatus: //Get information about the gateway
 				break;
-			case 'delete_yourself': //User has deleted this gateway from their account
+			case C2GEventType.DeleteYourself: //User has deleted this gateway from their account
 				console.log('Gateway has been deleted');
 				this.emit(GatewayEvent.Deleted);
 				break;
@@ -187,6 +198,19 @@ export class Gateway extends EventEmitter {
 		}
 
 		this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
+	}
+
+	private async doCharacteristicRead(deviceId: string, serviceUuid: string, characteristicUuid: string) {
+		try {
+			const char = new Characteristic(characteristicUuid, serviceUuid);
+			char.value = await this.bluetoothAdapter.readCharacteristicValue(deviceId, char);
+			this.mqttFacade.reportCharacteristicRead(deviceId, char);
+		} catch (err) {
+			this.mqttFacade.reportError(err);
+		}
+	}
+
+	private async doCharacteristicWrite(deviceId: string, serviceUuid: string, characteristicUuid: string, value: number[]) {
 	}
 
 	/**

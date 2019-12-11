@@ -75,6 +75,9 @@ var events_1 = require("events");
 var isEqual_1 = __importDefault(require("lodash/isEqual"));
 var bluetoothAdapter_1 = require("./bluetoothAdapter");
 var mqttFacade_1 = require("./mqttFacade");
+var bluetooth_1 = require("./interfaces/bluetooth");
+var c2g_1 = require("./interfaces/c2g");
+var utils_1 = require("./utils");
 var GatewayEvent;
 (function (GatewayEvent) {
     GatewayEvent["NameChanged"] = "NAME_CHANGED";
@@ -182,25 +185,32 @@ var Gateway = (function (_super) {
         }
         var op = message.operation;
         switch (op.type) {
-            case 'scan':
+            case c2g_1.C2GEventType.Scan:
+                utils_1.assumeType(op);
                 this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
                 break;
-            case 'device_discover':
+            case c2g_1.C2GEventType.PerformDiscover:
                 if (op.deviceAddress) {
                     this.doDiscover(op.deviceAddress);
                 }
                 break;
-            case 'device_characteristic_value_read':
+            case c2g_1.C2GEventType.CharacteristicValueRead:
+                if (op.deviceAddress && op.serviceUUID && op.characteristicUUID) {
+                    this.doCharacteristicRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID);
+                }
                 break;
-            case 'device_characteristic_value_write':
+            case c2g_1.C2GEventType.CharacteristicValueWrite:
+                if (op.deviceAddress && op.serviceUUID && op.characteristicUUID && op.characteristicValue) {
+                    this.doCharacteristicWrite(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.characteristicValue);
+                }
                 break;
-            case 'device_descriptor_value_read':
+            case c2g_1.C2GEventType.DescriptorValueRead:
                 break;
-            case 'device_descriptor_value_write':
+            case c2g_1.C2GEventType.DescriptoValueWrite:
                 break;
-            case 'get_gateway_status':
+            case c2g_1.C2GEventType.GatewayStatus:
                 break;
-            case 'delete_yourself':
+            case c2g_1.C2GEventType.DeleteYourself:
                 console.log('Gateway has been deleted');
                 this.emit(GatewayEvent.Deleted);
                 break;
@@ -243,6 +253,36 @@ var Gateway = (function (_super) {
                         this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
                         return [2];
                 }
+            });
+        });
+    };
+    Gateway.prototype.doCharacteristicRead = function (deviceId, serviceUuid, characteristicUuid) {
+        return __awaiter(this, void 0, void 0, function () {
+            var char, _a, err_1;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 2, , 3]);
+                        char = new bluetooth_1.Characteristic(characteristicUuid, serviceUuid);
+                        _a = char;
+                        return [4, this.bluetoothAdapter.readCharacteristicValue(deviceId, char)];
+                    case 1:
+                        _a.value = _b.sent();
+                        this.mqttFacade.reportCharacteristicRead(deviceId, char);
+                        return [3, 3];
+                    case 2:
+                        err_1 = _b.sent();
+                        this.mqttFacade.reportError(err_1);
+                        return [3, 3];
+                    case 3: return [2];
+                }
+            });
+        });
+    };
+    Gateway.prototype.doCharacteristicWrite = function (deviceId, serviceUuid, characteristicUuid, value) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2];
             });
         });
     };

@@ -79,7 +79,7 @@ var NobleAdapter = (function (_super) {
             _this.peripheralEntries[peripheral.address] = peripheral;
             var device = new scanResult_1.DeviceScanResult();
             device.address = {
-                address: peripheral.address,
+                address: peripheral.address.toUpperCase(),
                 type: peripheral.addressType,
             };
             device.rssi = peripheral.rssi;

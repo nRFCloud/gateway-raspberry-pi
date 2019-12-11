@@ -1,8 +1,9 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { Service } from './interfaces/bluetooth';
+import { Characteristic, Service } from './interfaces/bluetooth';
 
 enum EventType {
+	CharacteristicValueRead = 'device_characteristic_value_read_result',
 	DeviceDiscover = 'device_discover_result',
 	DeviceDisconnected = 'device_disconnect',
 	ScanResult = 'scan_result',
@@ -26,14 +27,13 @@ export class MqttFacade {
 	}
 
 	handleScanResult(result: DeviceScanResult, timeout: boolean = false) {
-		const scanEvent = {
+		const event = {
 			type: EventType.ScanResult,
 			subType: 'instant',
 			devices: result ? [result] : [],
 			timeout,
 		};
-		const g2cEvent = this.getG2CEvent(scanEvent);
-		this.publish(this.g2cTopic, g2cEvent);
+		this.publishG2CEvent(event);
 	}
 
 	reportConnections(statusConnections) {
@@ -48,21 +48,19 @@ export class MqttFacade {
 	}
 
 	reportConnectionUp(deviceId: string) {
-		const connectionUpEvent = {
+		const event = {
 			type: EventType.DeviceConnected,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
 		};
-		const g2cEvent = this.getG2CEvent(connectionUpEvent);
-		this.publish(this.g2cTopic, g2cEvent);
+		this.publishG2CEvent(event);
 	}
 
 	reportConnectionDown(deviceId: string) {
-		const connectionUpEvent = {
+		const event = {
 			type: EventType.DeviceDisconnected,
 			device: this.buildDeviceObjectForEvent(deviceId, false),
 		};
-		const g2cEvent = this.getG2CEvent(connectionUpEvent);
-		this.publish(this.g2cTopic, g2cEvent);
+		this.publishG2CEvent(event);
 	}
 
 	reportDiscover(deviceId: string, services: Service[]) {
@@ -71,9 +69,38 @@ export class MqttFacade {
 			device: this.buildDeviceObjectForEvent(deviceId, true),
 			services,
 		};
-		const g2cEvent = this.getG2CEvent(discoverEvent);
+		this.publishG2CEvent(discoverEvent);
+	}
+
+	reportError(err: any, id?: string, code?: number, deviceId?: string) {
+		code = typeof code !== 'undefined' ? code : -1;
+		err = typeof err === 'object' && err !== null ? JSON.stringify(err) : err;
+		this.publishG2CEvent({
+			type: 'error',
+			error: {
+				description: err,
+				code,
+			},
+			device: deviceId ? {
+				deviceAddress: deviceId,
+			} : undefined,
+		});
+	}
+
+	reportCharacteristicRead(deviceId: string,characteristic: Characteristic) {
+		const charEvent = {
+			type: EventType.CharacteristicValueRead,
+			characteristic,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(charEvent);
+	}
+
+	private publishG2CEvent(event) {
+		const g2cEvent = this.getG2CEvent(event);
 		this.publish(this.g2cTopic, g2cEvent);
 	}
+
 
 	private getG2CEvent(event) {
 		if (!event.timestamp) {
@@ -106,6 +133,7 @@ export class MqttFacade {
 			},
 		};
 	}
+
 
 
 }

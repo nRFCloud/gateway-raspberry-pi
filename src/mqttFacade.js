@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var EventType;
 (function (EventType) {
+    EventType["CharacteristicValueRead"] = "device_characteristic_value_read_result";
     EventType["DeviceDiscover"] = "device_discover_result";
     EventType["DeviceDisconnected"] = "device_disconnect";
     EventType["ScanResult"] = "scan_result";
@@ -23,14 +24,13 @@ var MqttFacade = (function () {
     });
     MqttFacade.prototype.handleScanResult = function (result, timeout) {
         if (timeout === void 0) { timeout = false; }
-        var scanEvent = {
+        var event = {
             type: EventType.ScanResult,
             subType: 'instant',
             devices: result ? [result] : [],
             timeout: timeout,
         };
-        var g2cEvent = this.getG2CEvent(scanEvent);
-        this.publish(this.g2cTopic, g2cEvent);
+        this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportConnections = function (statusConnections) {
         var shadowUpdate = {
@@ -43,20 +43,18 @@ var MqttFacade = (function () {
         this.publish(this.shadowTopic + "/update", shadowUpdate);
     };
     MqttFacade.prototype.reportConnectionUp = function (deviceId) {
-        var connectionUpEvent = {
+        var event = {
             type: EventType.DeviceConnected,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
-        var g2cEvent = this.getG2CEvent(connectionUpEvent);
-        this.publish(this.g2cTopic, g2cEvent);
+        this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportConnectionDown = function (deviceId) {
-        var connectionUpEvent = {
+        var event = {
             type: EventType.DeviceDisconnected,
             device: this.buildDeviceObjectForEvent(deviceId, false),
         };
-        var g2cEvent = this.getG2CEvent(connectionUpEvent);
-        this.publish(this.g2cTopic, g2cEvent);
+        this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportDiscover = function (deviceId, services) {
         var discoverEvent = {
@@ -64,7 +62,32 @@ var MqttFacade = (function () {
             device: this.buildDeviceObjectForEvent(deviceId, true),
             services: services,
         };
-        var g2cEvent = this.getG2CEvent(discoverEvent);
+        this.publishG2CEvent(discoverEvent);
+    };
+    MqttFacade.prototype.reportError = function (err, id, code, deviceId) {
+        code = typeof code !== 'undefined' ? code : -1;
+        err = typeof err === 'object' && err !== null ? JSON.stringify(err) : err;
+        this.publishG2CEvent({
+            type: 'error',
+            error: {
+                description: err,
+                code: code,
+            },
+            device: deviceId ? {
+                deviceAddress: deviceId,
+            } : undefined,
+        });
+    };
+    MqttFacade.prototype.reportCharacteristicRead = function (deviceId, characteristic) {
+        var charEvent = {
+            type: EventType.CharacteristicValueRead,
+            characteristic: characteristic,
+            device: this.buildDeviceObjectForEvent(deviceId, true),
+        };
+        this.publishG2CEvent(charEvent);
+    };
+    MqttFacade.prototype.publishG2CEvent = function (event) {
+        var g2cEvent = this.getG2CEvent(event);
         this.publish(this.g2cTopic, g2cEvent);
     };
     MqttFacade.prototype.getG2CEvent = function (event) {
