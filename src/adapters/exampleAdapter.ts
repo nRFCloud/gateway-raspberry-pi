@@ -1,6 +1,6 @@
 import { BluetoothAdapter } from '../bluetoothAdapter';
 import { DeviceScanResult } from '../interfaces/scanResult';
-import { Characteristic, Service } from '../interfaces/bluetooth';
+import { Characteristic, Descriptor, Service } from '../interfaces/bluetooth';
 
 export class ExampleAdapter extends BluetoothAdapter {
 
@@ -43,6 +43,10 @@ export class ExampleAdapter extends BluetoothAdapter {
 	}
 
 	readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]> {
+		return undefined;
+	}
+
+	readDescriptorValue(id: string, descriptor: Descriptor): Promise<number[]> {
 		return undefined;
 	}
 }

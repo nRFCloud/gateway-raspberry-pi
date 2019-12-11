@@ -58,10 +58,7 @@ var scanResult_1 = require("../interfaces/scanResult");
 var bluetooth_1 = require("../interfaces/bluetooth");
 var utils_1 = require("../utils");
 function formatUUIDIfNecessary(uuid) {
-    if (uuid.length === 32) {
-        return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
-    }
-    return uuid;
+    return uuid.replace(/-/g, '').toLowerCase();
 }
 var NobleAdapter = (function (_super) {
     __extends(NobleAdapter, _super);
@@ -110,6 +107,30 @@ var NobleAdapter = (function (_super) {
                         charac = _a.sent();
                         return [2, new Promise(function (resolve, reject) {
                                 charac.read(function (error, data) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve(data && Array.from(data));
+                                    }
+                                });
+                            })];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.readDescriptorValue = function (id, descriptor) {
+        return __awaiter(this, void 0, void 0, function () {
+            var pathParts, desc;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        pathParts = descriptor.path.split('/');
+                        return [4, this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2])];
+                    case 1:
+                        desc = _a.sent();
+                        return [2, new Promise(function (resolve, reject) {
+                                desc.readValue(function (error, data) {
                                     if (error) {
                                         reject(error);
                                     }
@@ -171,68 +192,75 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.discover = function (id) {
         return __awaiter(this, void 0, void 0, function () {
-            var returned, services, _loop_1, this_1, _i, services_1, service;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, _b, descriptors, _c, descriptors_1, descriptor, convertedDescriptor, _d, err_1;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0: return [4, this.connect(id)];
                     case 1:
-                        _a.sent();
+                        _e.sent();
                         returned = [];
                         return [4, this.discoverServices(id)];
                     case 2:
-                        services = _a.sent();
-                        _loop_1 = function (service) {
-                            var characteristics, converted, _i, characteristics_1, characteristic, convertedCharacteristic, _a;
-                            return __generator(this, function (_b) {
-                                switch (_b.label) {
-                                    case 0: return [4, new Promise(function (resolve, reject) {
-                                            service.discoverCharacteristics([], function (error, characteristics) {
-                                                if (error) {
-                                                    reject(error);
-                                                }
-                                                else {
-                                                    resolve(characteristics);
-                                                }
-                                            });
-                                        })];
-                                    case 1:
-                                        characteristics = _b.sent();
-                                        converted = this_1.convertService(service);
-                                        converted.characteristics = [];
-                                        _i = 0, characteristics_1 = characteristics;
-                                        _b.label = 2;
-                                    case 2:
-                                        if (!(_i < characteristics_1.length)) return [3, 5];
-                                        characteristic = characteristics_1[_i];
-                                        convertedCharacteristic = this_1.convertCharacteristic(converted, characteristic);
-                                        _a = convertedCharacteristic;
-                                        return [4, this_1.readCharacteristicValue(id, convertedCharacteristic)];
-                                    case 3:
-                                        _a.value = _b.sent();
-                                        _b.label = 4;
-                                    case 4:
-                                        _i++;
-                                        return [3, 2];
-                                    case 5:
-                                        returned.push(converted);
-                                        return [2];
-                                }
-                            });
-                        };
-                        this_1 = this;
+                        services = _e.sent();
                         _i = 0, services_1 = services;
-                        _a.label = 3;
+                        _e.label = 3;
                     case 3:
-                        if (!(_i < services_1.length)) return [3, 6];
+                        if (!(_i < services_1.length)) return [3, 17];
                         service = services_1[_i];
-                        return [5, _loop_1(service)];
+                        _e.label = 4;
                     case 4:
-                        _a.sent();
-                        _a.label = 5;
+                        _e.trys.push([4, 15, , 16]);
+                        return [4, this.discoverCharacteristics(id, service.uuid)];
                     case 5:
+                        characteristics = _e.sent();
+                        converted = this.convertService(service);
+                        converted.characteristics = [];
+                        _a = 0, characteristics_1 = characteristics;
+                        _e.label = 6;
+                    case 6:
+                        if (!(_a < characteristics_1.length)) return [3, 14];
+                        characteristic = characteristics_1[_a];
+                        convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
+                        _b = convertedCharacteristic;
+                        return [4, this.readCharacteristicValue(id, convertedCharacteristic)];
+                    case 7:
+                        _b.value = _e.sent();
+                        convertedCharacteristic.descriptors = [];
+                        return [4, this.discoverDescriptors(id, service.uuid, characteristic.uuid)];
+                    case 8:
+                        descriptors = _e.sent();
+                        _c = 0, descriptors_1 = descriptors;
+                        _e.label = 9;
+                    case 9:
+                        if (!(_c < descriptors_1.length)) return [3, 12];
+                        descriptor = descriptors_1[_c];
+                        convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
+                        _d = convertedDescriptor;
+                        return [4, this.readDescriptorValue(id, convertedDescriptor)];
+                    case 10:
+                        _d.value = _e.sent();
+                        convertedCharacteristic.descriptors.push(convertedDescriptor);
+                        _e.label = 11;
+                    case 11:
+                        _c++;
+                        return [3, 9];
+                    case 12:
+                        converted.characteristics.push(convertedCharacteristic);
+                        _e.label = 13;
+                    case 13:
+                        _a++;
+                        return [3, 6];
+                    case 14:
+                        returned.push(converted);
+                        return [3, 16];
+                    case 15:
+                        err_1 = _e.sent();
+                        console.error('Error discovering characteristics', err_1);
+                        return [3, 16];
+                    case 16:
                         _i++;
                         return [3, 3];
-                    case 6: return [2, returned];
+                    case 17: return [2, returned];
                 }
             });
         });
@@ -295,6 +323,29 @@ var NobleAdapter = (function (_super) {
             });
         });
     };
+    NobleAdapter.prototype.getDescriptorByUUID = function (deviceId, serviceUuid, characteristicUuid, uuid) {
+        return __awaiter(this, void 0, void 0, function () {
+            var entryKey, descriptors, descriptor;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        entryKey = deviceId + "/" + serviceUuid + "/" + characteristicUuid + "/" + uuid;
+                        if (!(typeof this.descriptorEntries[entryKey] === 'undefined')) return [3, 2];
+                        return [4, this.discoverDescriptors(deviceId, serviceUuid, characteristicUuid)];
+                    case 1:
+                        descriptors = _a.sent();
+                        if (descriptors.length) {
+                            descriptor = descriptors.find(function (desc) { return desc.uuid === uuid; });
+                            if (descriptor) {
+                                this.descriptorEntries[entryKey] = descriptor;
+                            }
+                        }
+                        _a.label = 2;
+                    case 2: return [2, this.descriptorEntries[entryKey]];
+                }
+            });
+        });
+    };
     NobleAdapter.prototype.discoverServices = function (deviceId, serviceUUIDs) {
         if (serviceUUIDs === void 0) { serviceUUIDs = []; }
         return __awaiter(this, void 0, void 0, function () {
@@ -307,6 +358,7 @@ var NobleAdapter = (function (_super) {
                         return [2, new Promise(function (resolve, reject) {
                                 device.discoverServices(serviceUUIDs.map(function (uuid) { return formatUUIDIfNecessary(uuid); }), function (error, services) {
                                     if (error) {
+                                        console.log('error discovering service', serviceUUIDs);
                                         reject(error);
                                     }
                                     else {
@@ -332,6 +384,7 @@ var NobleAdapter = (function (_super) {
                             return [2, new Promise(function (resolve, reject) {
                                     service_1.discoverCharacteristics(uuids.map(function (uuid) { return formatUUIDIfNecessary(uuid); }), function (error, characteristics) {
                                         if (error) {
+                                            console.info('error discover char', serviceUuid, error);
                                             reject(error);
                                         }
                                         else {
@@ -341,6 +394,33 @@ var NobleAdapter = (function (_super) {
                                 })];
                         }
                         return [2, Promise.reject("Service with UUID \"" + serviceUuid + "\" not found")];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.discoverDescriptors = function (deviceId, serviceUuid, characteristicUuid) {
+        return __awaiter(this, void 0, void 0, function () {
+            var characteristics, char_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.discoverCharacteristics(deviceId, serviceUuid, [characteristicUuid])];
+                    case 1:
+                        characteristics = _a.sent();
+                        if (characteristics.length > 0) {
+                            char_1 = characteristics[0];
+                            return [2, new Promise(function (resolve, reject) {
+                                    char_1.discoverDescriptors(function (error, descriptors) {
+                                        if (error) {
+                                            console.info('error discovering descriptors', serviceUuid, characteristicUuid, error);
+                                            reject(error);
+                                        }
+                                        else {
+                                            resolve(descriptors);
+                                        }
+                                    });
+                                })];
+                        }
+                        return [2, Promise.reject("Characteristic with path " + serviceUuid + "/" + characteristicUuid + " not found")];
                 }
             });
         });
@@ -390,6 +470,13 @@ var NobleAdapter = (function (_super) {
             notify: props.includes('notify'),
             indicate: props.includes('indicate'),
         };
+    };
+    NobleAdapter.prototype.convertDescriptor = function (convertedCharacteristic, descriptor) {
+        var uuid = utils_1.shortenUUID(descriptor.uuid);
+        var converted = new bluetooth_1.Descriptor(uuid);
+        converted.path = convertedCharacteristic.path + "/" + uuid;
+        converted.value = [];
+        return converted;
     };
     NobleAdapter.prototype.convertAdvertisementData = function (advertisement) {
         var data = new scanResult_1.AdvertisementData();

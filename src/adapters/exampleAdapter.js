@@ -43,6 +43,9 @@ var ExampleAdapter = (function (_super) {
     ExampleAdapter.prototype.readCharacteristicValue = function (id, characteristic) {
         return undefined;
     };
+    ExampleAdapter.prototype.readDescriptorValue = function (id, descriptor) {
+        return undefined;
+    };
     return ExampleAdapter;
 }(bluetoothAdapter_1.BluetoothAdapter));
 exports.ExampleAdapter = ExampleAdapter;
