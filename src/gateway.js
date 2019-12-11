@@ -190,21 +190,34 @@ var Gateway = (function (_super) {
                 this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
                 break;
             case c2g_1.C2GEventType.PerformDiscover:
+                utils_1.assumeType(op);
                 if (op.deviceAddress) {
                     this.doDiscover(op.deviceAddress);
                 }
                 break;
             case c2g_1.C2GEventType.CharacteristicValueRead:
+                utils_1.assumeType(op);
                 if (op.deviceAddress && op.serviceUUID && op.characteristicUUID) {
                     this.doCharacteristicRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID);
                 }
                 break;
             case c2g_1.C2GEventType.CharacteristicValueWrite:
-                if (op.deviceAddress && op.serviceUUID && op.characteristicUUID && op.characteristicValue) {
+                utils_1.assumeType(op);
+                if (op.deviceAddress &&
+                    op.serviceUUID &&
+                    op.characteristicUUID &&
+                    op.characteristicValue) {
                     this.doCharacteristicWrite(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.characteristicValue);
                 }
                 break;
             case c2g_1.C2GEventType.DescriptorValueRead:
+                utils_1.assumeType(op);
+                if (op.deviceAddress &&
+                    op.characteristicUUID &&
+                    op.serviceUUID &&
+                    op.descriptorUUID) {
+                    this.doDescriptorRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.descriptorUUID);
+                }
                 break;
             case c2g_1.C2GEventType.DescriptoValueWrite:
                 break;
@@ -281,10 +294,28 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.doCharacteristicWrite = function (deviceId, serviceUuid, characteristicUuid, value) {
         return __awaiter(this, void 0, void 0, function () {
+            var char, err_2;
             return __generator(this, function (_a) {
-                return [2];
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        char = new bluetooth_1.Characteristic(characteristicUuid, serviceUuid);
+                        char.value = value;
+                        return [4, this.bluetoothAdapter.writeCharacteristicValue(deviceId, char)];
+                    case 1:
+                        _a.sent();
+                        this.mqttFacade.reportCharacteristicWrite(deviceId, char);
+                        return [3, 3];
+                    case 2:
+                        err_2 = _a.sent();
+                        this.mqttFacade.reportError(err_2);
+                        return [3, 3];
+                    case 3: return [2];
+                }
             });
         });
+    };
+    Gateway.prototype.doDescriptorRead = function (deviceId, serviceUuid, characteristicUuid, descriptorUuid) {
     };
     Gateway.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
         var _this = this;

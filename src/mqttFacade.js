@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var EventType;
 (function (EventType) {
+    EventType["CharacteristicValueWrite"] = "device_characteristic_value_write_result";
     EventType["CharacteristicValueRead"] = "device_characteristic_value_read_result";
     EventType["DeviceDiscover"] = "device_discover_result";
     EventType["DeviceDisconnected"] = "device_disconnect";
@@ -85,6 +86,14 @@ var MqttFacade = (function () {
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
         this.publishG2CEvent(charEvent);
+    };
+    MqttFacade.prototype.reportCharacteristicWrite = function (deviceId, characteristic) {
+        var event = {
+            type: EventType.CharacteristicValueWrite,
+            characteristic: characteristic,
+            device: this.buildDeviceObjectForEvent(deviceId, true),
+        };
+        this.publishG2CEvent(event);
     };
     MqttFacade.prototype.publishG2CEvent = function (event) {
         var g2cEvent = this.getG2CEvent(event);

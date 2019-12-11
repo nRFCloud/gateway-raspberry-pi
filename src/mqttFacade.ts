@@ -3,6 +3,7 @@ import { DeviceScanResult } from './interfaces/scanResult';
 import { Characteristic, Service } from './interfaces/bluetooth';
 
 enum EventType {
+	CharacteristicValueWrite = 'device_characteristic_value_write_result',
 	CharacteristicValueRead = 'device_characteristic_value_read_result',
 	DeviceDiscover = 'device_discover_result',
 	DeviceDisconnected = 'device_disconnect',
@@ -96,6 +97,16 @@ export class MqttFacade {
 		this.publishG2CEvent(charEvent);
 	}
 
+
+	reportCharacteristicWrite(deviceId: string, characteristic: Characteristic) {
+		const event = {
+			type: EventType.CharacteristicValueWrite,
+			characteristic,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(event);
+	}
+
 	private publishG2CEvent(event) {
 		const g2cEvent = this.getG2CEvent(event);
 		this.publish(this.g2cTopic, g2cEvent);
@@ -133,7 +144,6 @@ export class MqttFacade {
 			},
 		};
 	}
-
 
 
 }

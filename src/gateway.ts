@@ -5,7 +5,15 @@ import isEqual from 'lodash/isEqual';
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
 import { Characteristic, Service } from './interfaces/bluetooth';
-import { C2GEventType, Message, ScanOperation } from './interfaces/c2g';
+import {
+	C2GEventType,
+	CharacteristicOperation,
+	CharacteristicWriteOperation,
+	DescriptorOperation,
+	DeviceOperation,
+	Message,
+	ScanOperation,
+} from './interfaces/c2g';
 import { assumeType } from './utils';
 
 export enum GatewayEvent {
@@ -126,7 +134,7 @@ export class Gateway extends EventEmitter {
 	}
 
 
-	private handleC2GMessage(message: any) {
+	private handleC2GMessage(message: Message) {
 		console.log('got g2c message', message);
 		if (!message || !message.type || !message.id || message.type !== 'operation' || !message.operation || !message.operation.type) {
 			throw new Error('Unknown message ' + JSON.stringify(message));
@@ -139,21 +147,38 @@ export class Gateway extends EventEmitter {
 
 				break;
 			case C2GEventType.PerformDiscover: //Do a discover AND full value read
+				assumeType<DeviceOperation>(op);
 				if (op.deviceAddress) {
 					this.doDiscover(op.deviceAddress);
 				}
 				break;
 			case C2GEventType.CharacteristicValueRead: //Read a characteristic
+				assumeType<CharacteristicOperation>(op);
 				if (op.deviceAddress && op.serviceUUID && op.characteristicUUID) {
 					this.doCharacteristicRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID);
 				}
 				break;
 			case C2GEventType.CharacteristicValueWrite: //Write value to a characteristic
-				if (op.deviceAddress && op.serviceUUID && op.characteristicUUID && op.characteristicValue) {
+				assumeType<CharacteristicWriteOperation>(op);
+				if (
+					op.deviceAddress &&
+					op.serviceUUID &&
+					op.characteristicUUID &&
+					op.characteristicValue
+				) {
 					this.doCharacteristicWrite(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.characteristicValue);
 				}
 				break;
 			case C2GEventType.DescriptorValueRead: //Read a descriptor
+				assumeType<DescriptorOperation>(op);
+				if (
+					op.deviceAddress &&
+					op.characteristicUUID &&
+					op.serviceUUID &&
+					op.descriptorUUID
+				) {
+					this.doDescriptorRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.descriptorUUID);
+				}
 				break;
 			case C2GEventType.DescriptoValueWrite: //Write value to a descriptor
 				break;
@@ -211,6 +236,18 @@ export class Gateway extends EventEmitter {
 	}
 
 	private async doCharacteristicWrite(deviceId: string, serviceUuid: string, characteristicUuid: string, value: number[]) {
+		try {
+			const char = new Characteristic(characteristicUuid, serviceUuid);
+			char.value = value;
+			await this.bluetoothAdapter.writeCharacteristicValue(deviceId, char);
+			this.mqttFacade.reportCharacteristicWrite(deviceId, char);
+		} catch (err) {
+			this.mqttFacade.reportError(err);
+		}
+	}
+
+	private doDescriptorRead(deviceId: string, serviceUuid: string, characteristicUuid: string, descriptorUuid: string) {
+
 	}
 
 	/**
@@ -339,4 +376,6 @@ export class Gateway extends EventEmitter {
 		this.reportConnections();
 		this.mqttFacade.reportConnectionDown(deviceId);
 	}
+
+
 }

@@ -35,6 +35,23 @@ export interface ScanOperation extends Operation {
 	};
 }
 
+export interface DeviceOperation extends Operation {
+	deviceAddress: string;
+}
+
+export interface CharacteristicOperation extends DeviceOperation {
+	serviceUUID: string;
+	characteristicUUID: string;
+}
+
+export interface CharacteristicWriteOperation extends CharacteristicOperation {
+	characteristicValue: number[];
+}
+
+export interface DescriptorOperation extends CharacteristicOperation {
+	descriptorUUID: string;
+}
+
 export interface Message {
 	type: 'operation';
 	id: string;

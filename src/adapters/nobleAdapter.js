@@ -97,12 +97,10 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.readCharacteristicValue = function (id, characteristic) {
         return __awaiter(this, void 0, void 0, function () {
-            var pathParts, charac;
+            var charac;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0:
-                        pathParts = characteristic.path.split('/');
-                        return [4, this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])];
+                    case 0: return [4, this.getNobleCharacteristic(id, characteristic)];
                     case 1:
                         charac = _a.sent();
                         return [2, new Promise(function (resolve, reject) {
@@ -119,14 +117,34 @@ var NobleAdapter = (function (_super) {
             });
         });
     };
-    NobleAdapter.prototype.readDescriptorValue = function (id, descriptor) {
+    NobleAdapter.prototype.writeCharacteristicValue = function (id, characteristic) {
         return __awaiter(this, void 0, void 0, function () {
-            var pathParts, desc;
+            var charac;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0:
-                        pathParts = descriptor.path.split('/');
-                        return [4, this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2])];
+                    case 0: return [4, this.getNobleCharacteristic(id, characteristic)];
+                    case 1:
+                        charac = _a.sent();
+                        return [2, new Promise(function (resolve, reject) {
+                                charac.write(Buffer.from(characteristic.value), false, function (error) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve();
+                                    }
+                                });
+                            })];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.readDescriptorValue = function (id, descriptor) {
+        return __awaiter(this, void 0, void 0, function () {
+            var desc;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getNobleDescriptor(id, descriptor)];
                     case 1:
                         desc = _a.sent();
                         return [2, new Promise(function (resolve, reject) {
@@ -433,8 +451,10 @@ var NobleAdapter = (function (_super) {
                 noble_1.default.off('discover', listener);
                 reject("Could not find device with id " + deviceId);
             }, 10000);
+            var llowered = deviceId.toLowerCase();
             var listener = function (peripheral) {
-                if (peripheral.id === deviceId || peripheral.address === deviceId) {
+                if ((peripheral.id && peripheral.id.toLowerCase() === llowered)
+                    || (peripheral.address && peripheral.address.toLowerCase() === llowered)) {
                     noble_1.default.stopScanning();
                     clearTimeout(timeoutHolder);
                     noble_1.default.off('discover', listener);
@@ -485,6 +505,14 @@ var NobleAdapter = (function (_super) {
         data.txPower = advertisement.txPowerLevel;
         data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
         return data;
+    };
+    NobleAdapter.prototype.getNobleCharacteristic = function (id, characteristic) {
+        var pathParts = characteristic.path.split('/');
+        return this.getCharacteristicByUUID(id, pathParts[0], pathParts[1]);
+    };
+    NobleAdapter.prototype.getNobleDescriptor = function (id, descriptor) {
+        var pathParts = descriptor.path.split('/');
+        return this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2]);
     };
     return NobleAdapter;
 }(bluetoothAdapter_1.BluetoothAdapter));

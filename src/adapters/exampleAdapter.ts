@@ -49,4 +49,8 @@ export class ExampleAdapter extends BluetoothAdapter {
 	readDescriptorValue(id: string, descriptor: Descriptor): Promise<number[]> {
 		return undefined;
 	}
+
+	writeCharacteristicValue(deviceId: string, characteristic: Characteristic): Promise<void> {
+		return undefined;
+	}
 }

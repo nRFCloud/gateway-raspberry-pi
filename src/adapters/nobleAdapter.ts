@@ -60,8 +60,7 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	async readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]> {
-		const pathParts = characteristic.path.split('/');
-		const charac = await this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])
+		const charac = await this.getNobleCharacteristic(id, characteristic);
 		return new Promise<number[]>((resolve, reject) => {
 			charac.read((error, data: Buffer) => {
 				if (error) {
@@ -73,9 +72,21 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
+	async writeCharacteristicValue(id: string, characteristic: Characteristic): Promise<void> {
+		const charac = await this.getNobleCharacteristic(id, characteristic);
+		return new Promise<void>((resolve, reject) => {
+			charac.write(Buffer.from(characteristic.value), false, (error) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve();
+				}
+			});
+		});
+	}
+
 	async readDescriptorValue(id: string, descriptor: Descriptor): Promise<number[]> {
-		const pathParts = descriptor.path.split('/');
-		const desc = await this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2]);
+		const desc = await this.getNobleDescriptor(id, descriptor);
 		return new Promise<number[]>((resolve, reject) => {
 			desc.readValue((error, data: Buffer) => {
 				if (error) {
@@ -256,8 +267,11 @@ export class NobleAdapter extends BluetoothAdapter {
 				noble.off('discover', listener);
 				reject(`Could not find device with id ${deviceId}`);
 			}, 10000);
+			const llowered = deviceId.toLowerCase();
 			const listener = (peripheral: Peripheral) => {
-				if (peripheral.id === deviceId || peripheral.address === deviceId) {
+				if ((peripheral.id && peripheral.id.toLowerCase() === llowered)
+					|| (peripheral.address && peripheral.address.toLowerCase() === llowered)
+				) {
 					noble.stopScanning();
 					clearTimeout(timeoutHolder);
 					noble.off('discover', listener);
@@ -315,6 +329,14 @@ export class NobleAdapter extends BluetoothAdapter {
 		return data;
 	}
 
+	private getNobleCharacteristic(id: string, characteristic: Characteristic): Promise<NobleCharacteristic> {
+		const pathParts = characteristic.path.split('/');
+		return this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])
+	}
 
+	private getNobleDescriptor(id: string, descriptor: Descriptor): Promise<NobleDescriptor> {
+		const pathParts = descriptor.path.split('/');
+		return this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2]);
+	}
 
 }
