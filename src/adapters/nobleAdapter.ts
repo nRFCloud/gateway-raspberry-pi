@@ -1,10 +1,10 @@
 import noble from '@abandonware/noble';
-import { Advertisement, Peripheral, Service as NobleService, Characteristic as NobleCharacteristic } from 'noble';
+import { Advertisement, Peripheral, Service as NobleService, Characteristic as NobleCharacteristic, Descriptor as NobleDescriptor } from 'noble';
 
 import { AdapterEvent, BluetoothAdapter } from '../bluetoothAdapter';
 import { AdvertisementData, DeviceScanResult } from '../interfaces/scanResult';
 import { Address } from '../interfaces/device';
-import { Characteristic, CharacteristicProperties, Service } from '../interfaces/bluetooth';
+import { Characteristic, CharacteristicProperties, Descriptor, Service } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
 
 
@@ -63,7 +63,21 @@ export class NobleAdapter extends BluetoothAdapter {
 		const pathParts = characteristic.path.split('/');
 		const charac = await this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])
 		return new Promise<number[]>((resolve, reject) => {
-			charac.read((error, data) => {
+			charac.read((error, data: Buffer) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve(data && Array.from(data));
+				}
+			});
+		});
+	}
+
+	async readDescriptorValue(id: string, descriptor: Descriptor): Promise<number[]> {
+		const pathParts = descriptor.path.split('/');
+		const desc = await this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2]);
+		return new Promise<number[]>((resolve, reject) => {
+			desc.readValue((error, data: Buffer) => {
 				if (error) {
 					reject(error);
 				} else {
@@ -116,6 +130,13 @@ export class NobleAdapter extends BluetoothAdapter {
 
 					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
 					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
+					convertedCharacteristic.descriptors = [];
+					const descriptors = await this.discoverDescriptors(id, service.uuid, characteristic.uuid);
+					for (const descriptor of descriptors) {
+						const convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
+						convertedDescriptor.value = await this.readDescriptorValue(id, convertedDescriptor);
+						convertedCharacteristic.descriptors.push(convertedDescriptor);
+					}
 					converted.characteristics.push(convertedCharacteristic);
 				}
 				returned.push(converted);
@@ -158,6 +179,21 @@ export class NobleAdapter extends BluetoothAdapter {
 		return this.characteristicEntries[entryKey];
 	}
 
+	private async getDescriptorByUUID(deviceId: string, serviceUuid: string, characteristicUuid: string, uuid: string): Promise<NobleDescriptor> {
+		const entryKey = `${deviceId}/${serviceUuid}/${characteristicUuid}/${uuid}`;
+		if (typeof this.descriptorEntries[entryKey] === 'undefined') {
+			const descriptors = await this.discoverDescriptors(deviceId, serviceUuid, characteristicUuid);
+			if (descriptors.length) {
+				const descriptor = descriptors.find((desc) => desc.uuid === uuid);
+				if (descriptor) {
+					this.descriptorEntries[entryKey] = descriptor;
+				}
+			}
+		}
+
+		return this.descriptorEntries[entryKey];
+	}
+
 	private async discoverServices(deviceId: string, serviceUUIDs: string[] = []): Promise<NobleService[]> {
 		const device = await this.getEntryForId(deviceId);
 		return new Promise<NobleService[]>((resolve, reject) => {
@@ -190,6 +226,26 @@ export class NobleAdapter extends BluetoothAdapter {
 		}
 
 		return Promise.reject(`Service with UUID "${serviceUuid}" not found`);
+	}
+
+
+	private async discoverDescriptors(deviceId: string, serviceUuid: string, characteristicUuid: string): Promise<NobleDescriptor[]> {
+		const characteristics = await this.discoverCharacteristics(deviceId, serviceUuid, [characteristicUuid]);
+		if (characteristics.length > 0) {
+			const char = characteristics[0];
+			return new Promise<NobleDescriptor[]>((resolve, reject) => {
+				char.discoverDescriptors((error, descriptors) => {
+					if (error) {
+						console.info('error discovering descriptors', serviceUuid, characteristicUuid, error);
+						reject(error);
+					} else {
+						resolve(descriptors);
+					}
+				});
+			});
+		}
+
+		return Promise.reject(`Characteristic with path ${serviceUuid}/${characteristicUuid} not found`);
 	}
 
 	private scanForDevice(deviceId: string): Promise<Peripheral> {
@@ -242,6 +298,14 @@ export class NobleAdapter extends BluetoothAdapter {
 		};
 	}
 
+	private convertDescriptor(convertedCharacteristic: Characteristic, descriptor: NobleDescriptor): Descriptor {
+		const uuid = shortenUUID(descriptor.uuid);
+		const converted = new Descriptor(uuid);
+		converted.path = `${convertedCharacteristic.path}/${uuid}`;
+		converted.value = [];
+		return converted;
+	}
+
 	private convertAdvertisementData(advertisement: Advertisement): AdvertisementData {
 		const data = new AdvertisementData();
 		data.serviceUuids = advertisement.serviceUuids
@@ -250,4 +314,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
 		return data;
 	}
+
+
+
 }
