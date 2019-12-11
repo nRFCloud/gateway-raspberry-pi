@@ -7,12 +7,6 @@ import { Address } from '../interfaces/device';
 import { Characteristic, CharacteristicProperties, Descriptor, Service } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
 
-
-//The frontend handles UUIDs as upper-case with no dashes, need to convert back to Noble version
-function formatUUIDIfNecessary(uuid: string): string {
-	return uuid.replace(/-/g, '').toLowerCase();
-}
-
 export class NobleAdapter extends BluetoothAdapter {
 
 	private peripheralEntries: {[key: string]: Peripheral} = {};
@@ -99,13 +93,13 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	async disconnect(id: string): Promise<any> {
-		const peripheral = await this.getEntryForId(id);
+		const peripheral = await this.getDeviceById(id);
 		peripheral.disconnect();
 		peripheral.removeAllListeners();
 	}
 
 	async connect(id: string): Promise<any> {
-		const peripheral = await this.getEntryForId(id);
+		const peripheral = await this.getDeviceById(id);
 		if (['connected', 'connecting'].includes(peripheral.state)) {
 			return;
 		}
@@ -159,7 +153,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		return returned;
 	}
 
-	private async getEntryForId(deviceId: string): Promise<Peripheral> {
+	private async getDeviceById(deviceId: string): Promise<Peripheral> {
 		if (typeof this.peripheralEntries[deviceId] === 'undefined') {
 			this.peripheralEntries[deviceId] = await this.scanForDevice(deviceId);
 		}
@@ -206,9 +200,9 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	private async discoverServices(deviceId: string, serviceUUIDs: string[] = []): Promise<NobleService[]> {
-		const device = await this.getEntryForId(deviceId);
+		const device = await this.getDeviceById(deviceId);
 		return new Promise<NobleService[]>((resolve, reject) => {
-			device.discoverServices(serviceUUIDs.map((uuid) => formatUUIDIfNecessary(uuid)), (error, services) => {
+			device.discoverServices(serviceUUIDs.map((uuid) => shortenUUID(uuid)), (error, services) => {
 
 				if (error) {
 					console.log('error discovering service', serviceUUIDs);
@@ -221,11 +215,10 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	private async discoverCharacteristics(deviceId: string, serviceUuid: string, uuids: string[] = []): Promise<NobleCharacteristic[]> {
-		const services = await this.discoverServices(deviceId, [serviceUuid]);
-		if (services.length > 0) {
-			const service = services[0];
+		const service = await this.getServiceByUUID(deviceId, serviceUuid);
+		if (service) {
 			return new Promise<NobleCharacteristic[]>((resolve, reject) => {
-				service.discoverCharacteristics(uuids.map((uuid) => formatUUIDIfNecessary(uuid)), (error, characteristics) => {
+				service.discoverCharacteristics(uuids.map((uuid) => shortenUUID(uuid)), (error, characteristics) => {
 					if (error) {
 						console.info('error discover char', serviceUuid, error);
 						reject(error);
@@ -241,11 +234,10 @@ export class NobleAdapter extends BluetoothAdapter {
 
 
 	private async discoverDescriptors(deviceId: string, serviceUuid: string, characteristicUuid: string): Promise<NobleDescriptor[]> {
-		const characteristics = await this.discoverCharacteristics(deviceId, serviceUuid, [characteristicUuid]);
-		if (characteristics.length > 0) {
-			const char = characteristics[0];
+		const characteristic = await this.getCharacteristicByUUID(deviceId, serviceUuid, characteristicUuid);
+		if (characteristic) {
 			return new Promise<NobleDescriptor[]>((resolve, reject) => {
-				char.discoverDescriptors((error, descriptors) => {
+				characteristic.discoverDescriptors((error, descriptors) => {
 					if (error) {
 						console.info('error discovering descriptors', serviceUuid, characteristicUuid, error);
 						reject(error);
