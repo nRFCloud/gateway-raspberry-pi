@@ -8,14 +8,15 @@ var EventType;
     EventType["DeviceConnected"] = "device_connect_result";
 })(EventType || (EventType = {}));
 var MqttFacade = (function () {
-    function MqttFacade(mqttClient, g2cTopic) {
+    function MqttFacade(mqttClient, g2cTopic, gatewayId) {
         this.messageId = 0;
         this.g2cTopic = g2cTopic;
         this.mqttClient = mqttClient;
+        this.gatewayId = gatewayId;
     }
     Object.defineProperty(MqttFacade.prototype, "shadowTopic", {
         get: function () {
-            return "$aws/things/" + this.mqttClient.clientId + "/shadow";
+            return "$aws/things/" + this.gatewayId + "/shadow";
         },
         enumerable: true,
         configurable: true

@@ -128,7 +128,7 @@ var Gateway = (function (_super) {
         _this.gatewayDevice.subscribe(_this.c2gTopic);
         _this.gatewayDevice.subscribe(_this.shadowGetTopic + "/accepted");
         _this.gatewayDevice.subscribe(_this.shadowUpdateTopic);
-        _this.mqttFacade = new mqttFacade_1.MqttFacade(_this.gatewayDevice, _this.g2cTopic);
+        _this.mqttFacade = new mqttFacade_1.MqttFacade(_this.gatewayDevice, _this.g2cTopic, _this.gatewayId);
         return _this;
     }
     Object.defineProperty(Gateway.prototype, "c2gTopic", {

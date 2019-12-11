@@ -109,7 +109,7 @@ export class Gateway extends EventEmitter {
 		this.gatewayDevice.subscribe(`${this.shadowGetTopic}/accepted`);
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
 
-		this.mqttFacade = new MqttFacade(this.gatewayDevice, this.g2cTopic);
+		this.mqttFacade = new MqttFacade(this.gatewayDevice, this.g2cTopic, this.gatewayId);
 	}
 
 	private handleMessage(topic: string, payload) {

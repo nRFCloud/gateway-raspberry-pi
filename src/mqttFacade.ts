@@ -11,16 +11,18 @@ enum EventType {
 
 export class MqttFacade {
 	private readonly mqttClient;
-	private readonly g2cTopic;
+	private readonly g2cTopic: string;
+	private readonly gatewayId: string;
 	private messageId = 0;
 
-	constructor(mqttClient: awsIot.device, g2cTopic: string) {
+	constructor(mqttClient: awsIot.device, g2cTopic: string, gatewayId: string) {
 		this.g2cTopic = g2cTopic;
 		this.mqttClient = mqttClient;
+		this.gatewayId = gatewayId;
 	}
 
 	private get shadowTopic(): string {
-		return `$aws/things/${this.mqttClient.clientId}/shadow`;
+		return `$aws/things/${this.gatewayId}/shadow`;
 	}
 
 	handleScanResult(result: DeviceScanResult, timeout: boolean = false) {
