@@ -58,10 +58,7 @@ var scanResult_1 = require("../interfaces/scanResult");
 var bluetooth_1 = require("../interfaces/bluetooth");
 var utils_1 = require("../utils");
 function formatUUIDIfNecessary(uuid) {
-    if (uuid.length === 32) {
-        return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
-    }
-    return uuid;
+    return uuid.toLowerCase();
 }
 var NobleAdapter = (function (_super) {
     __extends(NobleAdapter, _super);
@@ -71,6 +68,9 @@ var NobleAdapter = (function (_super) {
         _this.serviceEntries = {};
         _this.characteristicEntries = {};
         _this.descriptorEntries = {};
+        _this.gatewayState = {
+            discovering: false,
+        };
         noble_1.default.on('stateChange', function (state) {
             _this.adapterState = state;
         });
@@ -216,72 +216,78 @@ var NobleAdapter = (function (_super) {
             var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, _b, descriptors, _c, descriptors_1, descriptor, convertedDescriptor, _d, err_1;
             return __generator(this, function (_e) {
                 switch (_e.label) {
-                    case 0: return [4, this.connect(id)];
+                    case 0:
+                        if (this.gatewayState.discovering) {
+                            console.log('already doing a discover');
+                            return [2];
+                        }
+                        this.gatewayState.discovering = true;
+                        return [4, this.connect(id)];
                     case 1:
                         _e.sent();
-                        returned = [];
-                        return [4, this.discoverServices(id)];
+                        returned = {};
+                        return [4, this.discoverAllServices(id)];
                     case 2:
                         services = _e.sent();
                         _i = 0, services_1 = services;
                         _e.label = 3;
                     case 3:
-                        if (!(_i < services_1.length)) return [3, 17];
+                        if (!(_i < services_1.length)) return [3, 16];
                         service = services_1[_i];
                         _e.label = 4;
                     case 4:
-                        _e.trys.push([4, 15, , 16]);
-                        return [4, this.discoverCharacteristics(id, service.uuid)];
-                    case 5:
-                        characteristics = _e.sent();
+                        _e.trys.push([4, 14, , 15]);
+                        characteristics = service.characteristics;
                         converted = this.convertService(service);
                         converted.characteristics = [];
                         _a = 0, characteristics_1 = characteristics;
-                        _e.label = 6;
-                    case 6:
-                        if (!(_a < characteristics_1.length)) return [3, 14];
+                        _e.label = 5;
+                    case 5:
+                        if (!(_a < characteristics_1.length)) return [3, 13];
                         characteristic = characteristics_1[_a];
                         convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
                         _b = convertedCharacteristic;
                         return [4, this.readCharacteristicValue(id, convertedCharacteristic)];
-                    case 7:
+                    case 6:
                         _b.value = _e.sent();
                         convertedCharacteristic.descriptors = [];
                         return [4, this.discoverDescriptors(id, service.uuid, characteristic.uuid)];
-                    case 8:
+                    case 7:
                         descriptors = _e.sent();
                         _c = 0, descriptors_1 = descriptors;
-                        _e.label = 9;
-                    case 9:
-                        if (!(_c < descriptors_1.length)) return [3, 12];
+                        _e.label = 8;
+                    case 8:
+                        if (!(_c < descriptors_1.length)) return [3, 11];
                         descriptor = descriptors_1[_c];
                         convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
                         _d = convertedDescriptor;
                         return [4, this.readDescriptorValue(id, convertedDescriptor)];
-                    case 10:
+                    case 9:
                         _d.value = _e.sent();
                         convertedCharacteristic.descriptors.push(convertedDescriptor);
-                        _e.label = 11;
-                    case 11:
+                        _e.label = 10;
+                    case 10:
                         _c++;
-                        return [3, 9];
-                    case 12:
+                        return [3, 8];
+                    case 11:
                         converted.characteristics.push(convertedCharacteristic);
-                        _e.label = 13;
-                    case 13:
+                        _e.label = 12;
+                    case 12:
                         _a++;
-                        return [3, 6];
+                        return [3, 5];
+                    case 13:
+                        returned[converted.uuid] = converted;
+                        return [3, 15];
                     case 14:
-                        returned.push(converted);
-                        return [3, 16];
-                    case 15:
                         err_1 = _e.sent();
                         console.error('Error discovering characteristics', err_1);
-                        return [3, 16];
-                    case 16:
+                        return [3, 15];
+                    case 15:
                         _i++;
                         return [3, 3];
-                    case 17: return [2, returned];
+                    case 16:
+                        this.gatewayState.discovering = false;
+                        return [2, returned];
                 }
             });
         });
@@ -363,6 +369,39 @@ var NobleAdapter = (function (_super) {
                         }
                         _a.label = 2;
                     case 2: return [2, this.descriptorEntries[entryKey]];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.discoverAllServices = function (deviceId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var device;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getDeviceById(deviceId)];
+                    case 1:
+                        device = _a.sent();
+                        return [2, new Promise(function (resolve, reject) {
+                                device.discoverAllServicesAndCharacteristics(function (error, services, characteristics) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        for (var _i = 0, services_2 = services; _i < services_2.length; _i++) {
+                                            var service = services_2[_i];
+                                            var entryKey = deviceId + "/" + service.uuid;
+                                            _this.serviceEntries[entryKey] = service;
+                                            for (var _a = 0, _b = service.characteristics; _a < _b.length; _a++) {
+                                                var characteristic = _b[_a];
+                                                var entryKey_1 = deviceId + "/" + service.uuid + "/" + characteristic.uuid;
+                                                _this.characteristicEntries[entryKey_1] = characteristic;
+                                            }
+                                        }
+                                        resolve(services);
+                                    }
+                                });
+                            })];
                 }
             });
         });

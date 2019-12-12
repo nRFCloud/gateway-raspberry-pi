@@ -18,6 +18,9 @@ export class NobleAdapter extends BluetoothAdapter {
 	private characteristicEntries: {[key: string]: NobleCharacteristic} = {};
 	private descriptorEntries = {};
 	private adapterState;
+	private gatewayState = {
+		discovering: false,
+	};
 
 	constructor() {
 		super();
@@ -124,14 +127,19 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
-	async discover(id: string): Promise<Service[]> {
+	async discover(id: string): Promise<{[key: string]: Service}> {
+		if (this.gatewayState.discovering) {
+			console.log('already doing a discover');
+			return;
+		}
+		this.gatewayState.discovering = true;
 		await this.connect(id);
-		const returned = [];
-		const services: NobleService[] = await this.discoverServices(id);
+		const returned = {};
+		const services: NobleService[] = await this.discoverAllServices(id);
 
 		for (const service of services) {
 			try {
-				const characteristics = await this.discoverCharacteristics(id, service.uuid);
+				const characteristics = service.characteristics;
 
 				const converted = this.convertService(service);
 				converted.characteristics = [];
@@ -148,12 +156,12 @@ export class NobleAdapter extends BluetoothAdapter {
 					}
 					converted.characteristics.push(convertedCharacteristic);
 				}
-				returned.push(converted);
+				returned[converted.uuid] = converted;
 			} catch (err) {
 				console.error('Error discovering characteristics', err);
 			}
 		}
-
+		this.gatewayState.discovering = false;
 		return returned;
 	}
 
@@ -201,6 +209,28 @@ export class NobleAdapter extends BluetoothAdapter {
 		}
 
 		return this.descriptorEntries[entryKey];
+	}
+
+	private async discoverAllServices(deviceId: string): Promise<NobleService[]> {
+		const device = await this.getDeviceById(deviceId);
+		return new Promise<NobleService[]>((resolve, reject) => {
+			device.discoverAllServicesAndCharacteristics((error, services, characteristics) => {
+				if (error) {
+					reject(error);
+				} else {
+					for (const service of services) {
+						const entryKey = `${deviceId}/${service.uuid}`;
+						this.serviceEntries[entryKey] = service;
+						for (const characteristic of service.characteristics) {
+							const entryKey = `${deviceId}/${service.uuid}/${characteristic.uuid}`;
+							this.characteristicEntries[entryKey] = characteristic;
+						}
+					}
+
+					resolve(services);
+				}
+			});
+		});
 	}
 
 	private async discoverServices(deviceId: string, serviceUUIDs: string[] = []): Promise<NobleService[]> {

@@ -64,7 +64,7 @@ export class MqttFacade {
 		this.publishG2CEvent(event);
 	}
 
-	reportDiscover(deviceId: string, services: Service[]) {
+	reportDiscover(deviceId: string, services: {[key: string]: Service}) {
 		const discoverEvent = {
 			type: EventType.DeviceDiscover,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
