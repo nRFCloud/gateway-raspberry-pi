@@ -8,10 +8,7 @@ import { Characteristic, CharacteristicProperties, Descriptor, Service } from '.
 import { shortenUUID } from '../utils';
 
 function formatUUIDIfNecessary(uuid) {
-	if (uuid.length === 32) {
-		return uuid.replace(/([0-z]{8})([0-z]{4})([0-z]{4})([0-z]{4})([0-z]{12})/, '$1-$2-$3-$4-$5');
-	}
-	return uuid;
+	return uuid.toLowerCase();
 }
 
 export class NobleAdapter extends BluetoothAdapter {
