@@ -137,6 +137,15 @@ export class MqttFacade {
 		this.publishG2CEvent(event);
 	}
 
+	reportDescriptorChanged(deviceId: string, descriptor: Descriptor) {
+		const event: DescriptorEvent = {
+			type: EventType.DescriptorValueChanged,
+			descriptor,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(event);
+	}
+
 	private publishG2CEvent(event: G2CEvent) {
 		const g2cEvent = this.getG2CEvent(event);
 		this.publish(this.g2cTopic, g2cEvent);
@@ -174,5 +183,6 @@ export class MqttFacade {
 			},
 		};
 	}
+
 
 }

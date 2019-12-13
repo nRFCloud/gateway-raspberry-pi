@@ -4,6 +4,7 @@ export enum EventType {
 	CharacteristicValueChanged = 'device_characteristic_value_changed',
 	DescriptorValueWrite = 'device_descriptor_value_write_result',
 	DescriptorValueRead = 'device_descriptor_value_read_result',
+	DescriptorValueChanged = 'device_descriptor_value_changed',
 	CharacteristicValueWrite = 'device_characteristic_value_write_result',
 	CharacteristicValueRead = 'device_characteristic_value_read_result',
 	DeviceDiscover = 'device_discover_result',
@@ -32,7 +33,7 @@ export interface CharacteristicEvent extends DeviceEvent {
 }
 
 export interface DescriptorEvent extends DeviceEvent {
-	type: EventType.DescriptorValueRead | EventType.DescriptorValueWrite;
+	type: EventType.DescriptorValueRead | EventType.DescriptorValueWrite | EventType.DescriptorValueChanged;
 	descriptor: Descriptor;
 }
 

@@ -252,6 +252,7 @@ export class Gateway extends EventEmitter {
 			char.value = op.characteristicValue;
 			await this.bluetoothAdapter.writeCharacteristicValue(op.deviceAddress, char);
 			this.mqttFacade.reportCharacteristicWrite(op.deviceAddress, char);
+			this.mqttFacade.reportCharacteristicChanged(op.deviceAddress, char);
 		} catch (err) {
 			this.mqttFacade.reportError(err);
 		}
@@ -285,6 +286,7 @@ export class Gateway extends EventEmitter {
 			} else {
 				await this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor);
 			}
+			this.mqttFacade.reportDescriptorChanged(op.deviceAddress, descriptor);
 			this.mqttFacade.reportDescriptorWrite(op.deviceAddress, descriptor);
 		} catch (err) {
 			this.mqttFacade.reportError(err);

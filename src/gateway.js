@@ -313,6 +313,7 @@ var Gateway = (function (_super) {
                     case 1:
                         _a.sent();
                         this.mqttFacade.reportCharacteristicWrite(op.deviceAddress, char);
+                        this.mqttFacade.reportCharacteristicChanged(op.deviceAddress, char);
                         return [3, 3];
                     case 2:
                         err_2 = _a.sent();
@@ -375,6 +376,7 @@ var Gateway = (function (_super) {
                         _a.sent();
                         _a.label = 7;
                     case 7:
+                        this.mqttFacade.reportDescriptorChanged(op.deviceAddress, descriptor);
                         this.mqttFacade.reportDescriptorWrite(op.deviceAddress, descriptor);
                         return [3, 9];
                     case 8:

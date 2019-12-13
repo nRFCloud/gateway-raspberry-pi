@@ -112,6 +112,14 @@ var MqttFacade = (function () {
         };
         this.publishG2CEvent(event);
     };
+    MqttFacade.prototype.reportDescriptorChanged = function (deviceId, descriptor) {
+        var event = {
+            type: g2c_1.EventType.DescriptorValueChanged,
+            descriptor: descriptor,
+            device: this.buildDeviceObjectForEvent(deviceId, true),
+        };
+        this.publishG2CEvent(event);
+    };
     MqttFacade.prototype.publishG2CEvent = function (event) {
         var g2cEvent = this.getG2CEvent(event);
         this.publish(this.g2cTopic, g2cEvent);
