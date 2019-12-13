@@ -158,14 +158,13 @@ export class NobleAdapter extends BluetoothAdapter {
 				const converted = this.convertService(service);
 				converted.characteristics = {};
 				for (const characteristic of characteristics) {
-					//I think there's an infinite loop in the read value stuff
 					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
-					convertedCharacteristic.value = []; //await this.readCharacteristicValue(id, convertedCharacteristic);
+					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
 					convertedCharacteristic.descriptors = {};
 					const descriptors = await this.discoverDescriptors(id, service.uuid, characteristic.uuid);
 					for (const descriptor of descriptors) {
 						const convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
-						convertedDescriptor.value = []; //await this.readDescriptorValue(id, convertedDescriptor);
+						convertedDescriptor.value = await this.readDescriptorValue(id, convertedDescriptor);
 						convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
 					}
 					converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
@@ -232,6 +231,8 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	private async getCharacteristicByUUID(deviceId: string, serviceUuid: string, uuid: string): Promise<NobleCharacteristic> {
+		serviceUuid = serviceUuid.toUpperCase();
+		uuid = uuid.toUpperCase();
 		const entryKey = `${deviceId}/${serviceUuid}/${uuid}`;
 		if (typeof this.characteristicEntries[entryKey] === 'undefined') {
 			const characteristics = await this.discoverCharacteristics(deviceId, serviceUuid, [uuid]);
@@ -244,6 +245,9 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	private async getDescriptorByUUID(deviceId: string, serviceUuid: string, characteristicUuid: string, uuid: string): Promise<NobleDescriptor> {
+		serviceUuid = serviceUuid.toUpperCase();
+		characteristicUuid = characteristicUuid.toUpperCase();
+
 		const entryKey = `${deviceId}/${serviceUuid}/${characteristicUuid}/${uuid}`;
 		if (typeof this.descriptorEntries[entryKey] === 'undefined') {
 			const descriptors = await this.discoverDescriptors(deviceId, serviceUuid, characteristicUuid);
@@ -400,9 +404,9 @@ export class NobleAdapter extends BluetoothAdapter {
 		return data;
 	}
 
-	private getNobleCharacteristic(id: string, characteristic: Characteristic): Promise<NobleCharacteristic> {
+	private async getNobleCharacteristic(id: string, characteristic: Characteristic): Promise<NobleCharacteristic> {
 		const pathParts = characteristic.path.split('/');
-		return this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])
+		return await this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])
 	}
 
 	private getNobleDescriptor(id: string, descriptor: Descriptor): Promise<NobleDescriptor> {

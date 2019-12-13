@@ -256,9 +256,9 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.discover = function (id) {
         return __awaiter(this, void 0, void 0, function () {
-            var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, descriptors, _b, descriptors_1, descriptor, convertedDescriptor, err_1;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, _b, descriptors, _c, descriptors_1, descriptor, convertedDescriptor, _d, err_1;
+            return __generator(this, function (_e) {
+                switch (_e.label) {
                     case 0:
                         if (this.gatewayState.discovering) {
                             console.log('already doing a discover');
@@ -267,55 +267,68 @@ var NobleAdapter = (function (_super) {
                         this.gatewayState.discovering = true;
                         return [4, this.connect(id)];
                     case 1:
-                        _c.sent();
+                        _e.sent();
                         returned = {};
                         return [4, this.discoverAllServices(id)];
                     case 2:
-                        services = _c.sent();
+                        services = _e.sent();
                         _i = 0, services_1 = services;
-                        _c.label = 3;
+                        _e.label = 3;
                     case 3:
-                        if (!(_i < services_1.length)) return [3, 11];
+                        if (!(_i < services_1.length)) return [3, 16];
                         service = services_1[_i];
-                        _c.label = 4;
+                        _e.label = 4;
                     case 4:
-                        _c.trys.push([4, 9, , 10]);
+                        _e.trys.push([4, 14, , 15]);
                         characteristics = service.characteristics;
                         converted = this.convertService(service);
                         converted.characteristics = {};
                         _a = 0, characteristics_1 = characteristics;
-                        _c.label = 5;
+                        _e.label = 5;
                     case 5:
-                        if (!(_a < characteristics_1.length)) return [3, 8];
+                        if (!(_a < characteristics_1.length)) return [3, 13];
                         characteristic = characteristics_1[_a];
                         convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
-                        convertedCharacteristic.value = [];
+                        _b = convertedCharacteristic;
+                        return [4, this.readCharacteristicValue(id, convertedCharacteristic)];
+                    case 6:
+                        _b.value = _e.sent();
                         convertedCharacteristic.descriptors = {};
                         return [4, this.discoverDescriptors(id, service.uuid, characteristic.uuid)];
-                    case 6:
-                        descriptors = _c.sent();
-                        for (_b = 0, descriptors_1 = descriptors; _b < descriptors_1.length; _b++) {
-                            descriptor = descriptors_1[_b];
-                            convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
-                            convertedDescriptor.value = [];
-                            convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
-                        }
-                        converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
-                        _c.label = 7;
                     case 7:
+                        descriptors = _e.sent();
+                        _c = 0, descriptors_1 = descriptors;
+                        _e.label = 8;
+                    case 8:
+                        if (!(_c < descriptors_1.length)) return [3, 11];
+                        descriptor = descriptors_1[_c];
+                        convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
+                        _d = convertedDescriptor;
+                        return [4, this.readDescriptorValue(id, convertedDescriptor)];
+                    case 9:
+                        _d.value = _e.sent();
+                        convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
+                        _e.label = 10;
+                    case 10:
+                        _c++;
+                        return [3, 8];
+                    case 11:
+                        converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
+                        _e.label = 12;
+                    case 12:
                         _a++;
                         return [3, 5];
-                    case 8:
+                    case 13:
                         returned[converted.uuid] = converted;
-                        return [3, 10];
-                    case 9:
-                        err_1 = _c.sent();
+                        return [3, 15];
+                    case 14:
+                        err_1 = _e.sent();
                         console.error('Error discovering characteristics', err_1);
-                        return [3, 10];
-                    case 10:
+                        return [3, 15];
+                    case 15:
                         _i++;
                         return [3, 3];
-                    case 11:
+                    case 16:
                         this.gatewayState.discovering = false;
                         return [2, returned];
                 }
@@ -417,6 +430,8 @@ var NobleAdapter = (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        serviceUuid = serviceUuid.toUpperCase();
+                        uuid = uuid.toUpperCase();
                         entryKey = deviceId + "/" + serviceUuid + "/" + uuid;
                         if (!(typeof this.characteristicEntries[entryKey] === 'undefined')) return [3, 2];
                         return [4, this.discoverCharacteristics(deviceId, serviceUuid, [uuid])];
@@ -437,6 +452,8 @@ var NobleAdapter = (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        serviceUuid = serviceUuid.toUpperCase();
+                        characteristicUuid = characteristicUuid.toUpperCase();
                         entryKey = deviceId + "/" + serviceUuid + "/" + characteristicUuid + "/" + uuid;
                         if (!(typeof this.descriptorEntries[entryKey] === 'undefined')) return [3, 2];
                         return [4, this.discoverDescriptors(deviceId, serviceUuid, characteristicUuid)];
@@ -626,8 +643,17 @@ var NobleAdapter = (function (_super) {
         return data;
     };
     NobleAdapter.prototype.getNobleCharacteristic = function (id, characteristic) {
-        var pathParts = characteristic.path.split('/');
-        return this.getCharacteristicByUUID(id, pathParts[0], pathParts[1]);
+        return __awaiter(this, void 0, void 0, function () {
+            var pathParts;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        pathParts = characteristic.path.split('/');
+                        return [4, this.getCharacteristicByUUID(id, pathParts[0], pathParts[1])];
+                    case 1: return [2, _a.sent()];
+                }
+            });
+        });
     };
     NobleAdapter.prototype.getNobleDescriptor = function (id, descriptor) {
         var pathParts = descriptor.path.split('/');
