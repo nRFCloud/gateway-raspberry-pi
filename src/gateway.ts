@@ -4,12 +4,12 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
-import { Characteristic, Service } from './interfaces/bluetooth';
+import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
 import {
 	C2GEventType,
 	CharacteristicOperation,
 	CharacteristicWriteOperation,
-	DescriptorOperation,
+	DescriptorOperation, DescriptorWriteOperation,
 	DeviceOperation,
 	Message,
 	ScanOperation,
@@ -155,7 +155,7 @@ export class Gateway extends EventEmitter {
 			case C2GEventType.CharacteristicValueRead: //Read a characteristic
 				assumeType<CharacteristicOperation>(op);
 				if (op.deviceAddress && op.serviceUUID && op.characteristicUUID) {
-					this.doCharacteristicRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID);
+					this.doCharacteristicRead(op);
 				}
 				break;
 			case C2GEventType.CharacteristicValueWrite: //Write value to a characteristic
@@ -166,7 +166,7 @@ export class Gateway extends EventEmitter {
 					op.characteristicUUID &&
 					op.characteristicValue
 				) {
-					this.doCharacteristicWrite(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.characteristicValue);
+					this.doCharacteristicWrite(op);
 				}
 				break;
 			case C2GEventType.DescriptorValueRead: //Read a descriptor
@@ -177,10 +177,20 @@ export class Gateway extends EventEmitter {
 					op.serviceUUID &&
 					op.descriptorUUID
 				) {
-					this.doDescriptorRead(op.deviceAddress, op.serviceUUID, op.characteristicUUID, op.descriptorUUID);
+					this.doDescriptorRead(op);
 				}
 				break;
 			case C2GEventType.DescriptoValueWrite: //Write value to a descriptor
+				assumeType<DescriptorWriteOperation>(op);
+				if (
+					op.deviceAddress &&
+					op.characteristicUUID &&
+					op.serviceUUID &&
+					op.descriptorUUID &&
+					op.descriptorValue
+				) {
+					this.doDescriptorWrite(op);
+				}
 				break;
 			case C2GEventType.GatewayStatus: //Get information about the gateway
 				break;
@@ -225,29 +235,46 @@ export class Gateway extends EventEmitter {
 		this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
 	}
 
-	private async doCharacteristicRead(deviceId: string, serviceUuid: string, characteristicUuid: string) {
+	private async doCharacteristicRead(op: CharacteristicOperation) {
 		try {
-			const char = new Characteristic(characteristicUuid, serviceUuid);
-			char.value = await this.bluetoothAdapter.readCharacteristicValue(deviceId, char);
-			this.mqttFacade.reportCharacteristicRead(deviceId, char);
+			const char = new Characteristic(op.characteristicUUID, op.serviceUUID);
+			char.value = await this.bluetoothAdapter.readCharacteristicValue(op.deviceAddress, char);
+			this.mqttFacade.reportCharacteristicRead(op.deviceAddress, char);
 		} catch (err) {
 			this.mqttFacade.reportError(err);
 		}
 	}
 
-	private async doCharacteristicWrite(deviceId: string, serviceUuid: string, characteristicUuid: string, value: number[]) {
+	private async doCharacteristicWrite(op: CharacteristicWriteOperation) {
 		try {
-			const char = new Characteristic(characteristicUuid, serviceUuid);
-			char.value = value;
-			await this.bluetoothAdapter.writeCharacteristicValue(deviceId, char);
-			this.mqttFacade.reportCharacteristicWrite(deviceId, char);
+			const char = new Characteristic(op.characteristicUUID, op.serviceUUID);
+			char.value = op.characteristicValue;
+			await this.bluetoothAdapter.writeCharacteristicValue(op.deviceAddress, char);
+			this.mqttFacade.reportCharacteristicWrite(op.deviceAddress, char);
 		} catch (err) {
 			this.mqttFacade.reportError(err);
 		}
 	}
 
-	private doDescriptorRead(deviceId: string, serviceUuid: string, characteristicUuid: string, descriptorUuid: string) {
+	private async doDescriptorRead(op: DescriptorOperation) {
+		try {
+			const descriptor = new Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
+			descriptor.value = await this.bluetoothAdapter.readDescriptorValue(op.deviceAddress, descriptor);
+			this.mqttFacade.reportDescriptorRead(op.deviceAddress, descriptor);
+		} catch (err) {
+			this.mqttFacade.reportError(err);
+		}
+	}
 
+	private async doDescriptorWrite(op: DescriptorWriteOperation) {
+		try {
+			const descriptor = new Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
+			descriptor.value = op.descriptorValue;
+			await this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor);
+			this.mqttFacade.reportDescriptorWrite(op.deviceAddress, descriptor);
+		} catch (err) {
+			this.mqttFacade.reportError(err);
+		}
 	}
 
 	/**
@@ -376,6 +403,4 @@ export class Gateway extends EventEmitter {
 		this.reportConnections();
 		this.mqttFacade.reportConnectionDown(deviceId);
 	}
-
-
 }

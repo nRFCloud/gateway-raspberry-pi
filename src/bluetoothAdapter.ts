@@ -66,4 +66,6 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	abstract readDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<number[]>;
 
 	abstract writeCharacteristicValue(deviceId: string, characteristic: Characteristic): Promise<void>;
+
+	abstract writeDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<void>;
 }

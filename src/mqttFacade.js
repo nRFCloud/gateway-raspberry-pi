@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var EventType;
 (function (EventType) {
+    EventType["DescriptorValueWrite"] = "device_descriptor_value_write_result";
+    EventType["DescriptorValueRead"] = "device_descriptor_value_read_result";
     EventType["CharacteristicValueWrite"] = "device_characteristic_value_write_result";
     EventType["CharacteristicValueRead"] = "device_characteristic_value_read_result";
     EventType["DeviceDiscover"] = "device_discover_result";
@@ -91,6 +93,22 @@ var MqttFacade = (function () {
         var event = {
             type: EventType.CharacteristicValueWrite,
             characteristic: characteristic,
+            device: this.buildDeviceObjectForEvent(deviceId, true),
+        };
+        this.publishG2CEvent(event);
+    };
+    MqttFacade.prototype.reportDescriptorRead = function (deviceId, descriptor) {
+        var event = {
+            type: EventType.DescriptorValueRead,
+            descriptor: descriptor,
+            device: this.buildDeviceObjectForEvent(deviceId, true),
+        };
+        this.publishG2CEvent(event);
+    };
+    MqttFacade.prototype.reportDescriptorWrite = function (deviceId, descriptor) {
+        var event = {
+            type: EventType.DescriptorValueWrite,
+            descriptor: descriptor,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
         this.publishG2CEvent(event);

@@ -52,6 +52,10 @@ export interface DescriptorOperation extends CharacteristicOperation {
 	descriptorUUID: string;
 }
 
+export interface DescriptorWriteOperation extends DescriptorOperation {
+	descriptorValue: number[];
+}
+
 export interface Message {
 	type: 'operation';
 	id: string;

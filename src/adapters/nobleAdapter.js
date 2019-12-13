@@ -164,6 +164,28 @@ var NobleAdapter = (function (_super) {
             });
         });
     };
+    NobleAdapter.prototype.writeDescriptorValue = function (id, descriptor) {
+        return __awaiter(this, void 0, void 0, function () {
+            var desc;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getNobleDescriptor(id, descriptor)];
+                    case 1:
+                        desc = _a.sent();
+                        return [2, new Promise(function (resolve, reject) {
+                                desc.writeValue(Buffer.from(descriptor.value), function (error) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve();
+                                    }
+                                });
+                            })];
+                }
+            });
+        });
+    };
     NobleAdapter.prototype.disconnect = function (id) {
         return __awaiter(this, void 0, void 0, function () {
             var peripheral;
@@ -197,16 +219,26 @@ var NobleAdapter = (function (_super) {
                         peripheral.on('connect', function () {
                             _this.emit(bluetoothAdapter_1.AdapterEvent.DeviceConnected, id);
                         });
-                        return [2, new Promise(function (resolve, reject) {
-                                peripheral.connect(function (error) {
-                                    if (error) {
-                                        reject(error);
-                                    }
-                                    else {
-                                        resolve();
+                        return [2, new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            noble_1.default.stopScanning();
+                                            return [4, new Promise(function (resolve) { return setTimeout(resolve, 1000); })];
+                                        case 1:
+                                            _a.sent();
+                                            peripheral.connect(function (error) {
+                                                if (error) {
+                                                    reject(error);
+                                                }
+                                                else {
+                                                    resolve();
+                                                }
+                                            });
+                                            return [2];
                                     }
                                 });
-                            })];
+                            }); })];
                 }
             });
         });

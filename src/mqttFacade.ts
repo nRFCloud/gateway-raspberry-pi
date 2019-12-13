@@ -1,8 +1,10 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { Characteristic, Service } from './interfaces/bluetooth';
+import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
 
 enum EventType {
+	DescriptorValueWrite= 'device_descriptor_value_write_result',
+	DescriptorValueRead = 'device_descriptor_value_read_result',
 	CharacteristicValueWrite = 'device_characteristic_value_write_result',
 	CharacteristicValueRead = 'device_characteristic_value_read_result',
 	DeviceDiscover = 'device_discover_result',
@@ -107,6 +109,24 @@ export class MqttFacade {
 		this.publishG2CEvent(event);
 	}
 
+	reportDescriptorRead(deviceId: string, descriptor: Descriptor) {
+		const event = {
+			type: EventType.DescriptorValueRead,
+			descriptor,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(event);
+	}
+
+	reportDescriptorWrite(deviceId: string, descriptor: Descriptor) {
+		const event = {
+			type: EventType.DescriptorValueWrite,
+			descriptor,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(event);
+	}
+
 	private publishG2CEvent(event) {
 		const g2cEvent = this.getG2CEvent(event);
 		this.publish(this.g2cTopic, g2cEvent);
@@ -144,6 +164,7 @@ export class MqttFacade {
 			},
 		};
 	}
+
 
 
 }

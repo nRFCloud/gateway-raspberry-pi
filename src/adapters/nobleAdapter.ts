@@ -13,6 +13,7 @@ function formatUUIDIfNecessary(uuid) {
 
 export class NobleAdapter extends BluetoothAdapter {
 
+
 	private peripheralEntries: {[key: string]: Peripheral} = {};
 	private serviceEntries: {[key: string]: NobleService} = {};
 	private characteristicEntries: {[key: string]: NobleCharacteristic} = {};
@@ -99,6 +100,19 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
+	async writeDescriptorValue(id: string, descriptor: Descriptor): Promise<void> {
+		const desc = await this.getNobleDescriptor(id, descriptor);
+		return new Promise<void>((resolve, reject) => {
+			desc.writeValue(Buffer.from(descriptor.value), (error) =>{
+				if (error) {
+					reject(error);
+				} else {
+					resolve();
+				}
+			});
+		});
+	}
+
 	async disconnect(id: string): Promise<any> {
 		const peripheral = await this.getDeviceById(id);
 		peripheral.disconnect();
@@ -116,7 +130,9 @@ export class NobleAdapter extends BluetoothAdapter {
 		peripheral.on('connect', () => {
 			this.emit(AdapterEvent.DeviceConnected, id);
 		});
-		return new Promise<any>((resolve, reject) => {
+		return new Promise<any>(async (resolve, reject) => {
+			noble.stopScanning();
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 			peripheral.connect((error) => {
 				if (error) {
 					reject(error);

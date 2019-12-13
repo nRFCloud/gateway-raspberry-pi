@@ -4,8 +4,12 @@ export class Descriptor {
 	handle: number;
 	path: string;
 
-	constructor(uuid: string) {
+	constructor(uuid: string, characteristicUuid: string = null, serviceUuid: string = null) {
 		this.uuid = uuid;
+
+		if (characteristicUuid && serviceUuid) {
+			this.path = `${serviceUuid}/${characteristicUuid}/${uuid}`;
+		}
 	}
 }
 
