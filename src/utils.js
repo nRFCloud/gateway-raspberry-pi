@@ -43,6 +43,7 @@ function convertCharacteristic(characteristic) {
 function convertCharacteristics(characteristics) {
     var retval = null;
     if (characteristics && characteristics.length) {
+        retval = {};
         for (var _i = 0, characteristics_1 = characteristics; _i < characteristics_1.length; _i++) {
             var characteristic = characteristics_1[_i];
             retval[characteristic.uuid] = convertCharacteristic(characteristic);

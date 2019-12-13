@@ -61,6 +61,7 @@ function convertCharacteristics(characteristics: Characteristic[]): G2CCharacter
 	let retval: G2CCharacteristics = null;
 
 	if (characteristics && characteristics.length) {
+		retval = {};
 		for (const characteristic of characteristics) {
 			retval[characteristic.uuid] = convertCharacteristic(characteristic);
 		}
