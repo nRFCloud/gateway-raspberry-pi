@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
 import { DeviceScanResult } from './interfaces/scanResult';
-import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
+import { Characteristic, Descriptor, Service, Services } from './interfaces/bluetooth';
 
 export enum AdapterEvent {
 	DeviceDisconnected = 'DEVICE_DISCONNECTED',
@@ -47,7 +47,7 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	 * @param id Device ID to discover
 	 * @returns Service[] An array of services
 	 */
-	abstract discover(id: string): Promise<Service[]>;
+	abstract discover(id: string): Promise<Services>;
 
 	/**
 	 * Reads a characteristic value from a device

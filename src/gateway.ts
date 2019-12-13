@@ -4,7 +4,7 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
-import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
+import { Characteristic, Descriptor, Service, Services } from './interfaces/bluetooth';
 import {
 	C2GEventType,
 	CharacteristicOperation,
@@ -51,7 +51,7 @@ export class Gateway extends EventEmitter {
 	private isTryingConnection: boolean = false;
 	private lastTriedAddress: string = null;
 
-	private discoveryCache: {[key: string]: Service[]} = {};
+	private discoveryCache: {[key: string]: Services} = {};
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;

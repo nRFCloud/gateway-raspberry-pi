@@ -1,4 +1,4 @@
-import { Characteristic, Descriptor } from './bluetooth';
+import { BLEDevice, Characteristic, Descriptor, Services } from './bluetooth';
 
 export enum EventType {
 	DescriptorValueWrite= 'device_descriptor_value_write_result',
@@ -16,28 +16,13 @@ export interface G2CEvent {
 	type: EventType;
 }
 
-interface BLEAddress {
-	address: string;
-	type: string;
-}
-
-interface BLEDeviceConnectionStatus {
-	connected: boolean;
-}
-
-export interface G2CDevice {
-	id: string;
-	address: BLEAddress;
-	status: BLEDeviceConnectionStatus;
-}
-
 export interface DeviceEvent extends G2CEvent {
-	device: G2CDevice;
+	device: BLEDevice;
 }
 
 export interface DeviceDiscoverEvent extends DeviceEvent {
 	type: EventType.DeviceDiscover;
-	services: G2CServices;
+	services: Services;
 }
 
 export interface CharacteristicEvent extends DeviceEvent {
@@ -68,42 +53,3 @@ export interface ErrorEvent extends G2CEvent {
 	};
 }
 
-export interface G2CCharacteristicProperties {
-	read: boolean;
-	writeWithoutResponse: boolean;
-	write: boolean;
-	notify: boolean;
-	indicate: boolean;
-	authorizedSignedWrite: boolean;
-}
-
-export interface G2CDescriptor {
-	uuid: string;
-	path: string;
-	value: number[];
-}
-
-export interface G2CDescriptors {
-	[key: string]: G2CDescriptor;
-}
-
-export interface G2CCharacteristic {
-	uuid: string;
-	path: string;
-	value: number[];
-	properties: G2CCharacteristicProperties;
-	descriptors: G2CDescriptors;
-}
-
-export interface G2CCharacteristics {
-	[key: string]: G2CCharacteristic;
-}
-
-export interface G2CService {
-	uuid: string;
-	characteristics: G2CCharacteristics;
-}
-
-export interface G2CServices {
-	[key: string]: G2CService;
-}

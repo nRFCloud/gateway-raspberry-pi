@@ -257,7 +257,7 @@ var NobleAdapter = (function (_super) {
                         return [4, this.connect(id)];
                     case 1:
                         _e.sent();
-                        returned = [];
+                        returned = {};
                         return [4, this.discoverAllServices(id)];
                     case 2:
                         services = _e.sent();
@@ -271,7 +271,7 @@ var NobleAdapter = (function (_super) {
                         _e.trys.push([4, 14, , 15]);
                         characteristics = service.characteristics;
                         converted = this.convertService(service);
-                        converted.characteristics = [];
+                        converted.characteristics = {};
                         _a = 0, characteristics_1 = characteristics;
                         _e.label = 5;
                     case 5:
@@ -282,7 +282,7 @@ var NobleAdapter = (function (_super) {
                         return [4, this.readCharacteristicValue(id, convertedCharacteristic)];
                     case 6:
                         _b.value = _e.sent();
-                        convertedCharacteristic.descriptors = [];
+                        convertedCharacteristic.descriptors = {};
                         return [4, this.discoverDescriptors(id, service.uuid, characteristic.uuid)];
                     case 7:
                         descriptors = _e.sent();
@@ -296,19 +296,19 @@ var NobleAdapter = (function (_super) {
                         return [4, this.readDescriptorValue(id, convertedDescriptor)];
                     case 9:
                         _d.value = _e.sent();
-                        convertedCharacteristic.descriptors.push(convertedDescriptor);
+                        convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
                         _e.label = 10;
                     case 10:
                         _c++;
                         return [3, 8];
                     case 11:
-                        converted.characteristics.push(convertedCharacteristic);
+                        converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
                         _e.label = 12;
                     case 12:
                         _a++;
                         return [3, 5];
                     case 13:
-                        returned.push(converted);
+                        returned[converted.uuid] = converted;
                         return [3, 15];
                     case 14:
                         err_1 = _e.sent();
@@ -539,14 +539,12 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.convertService = function (service) {
         var uuid = utils_1.shortenUUID(service.uuid);
-        var returned = new bluetooth_1.Service(uuid);
-        returned.path = uuid;
-        return returned;
+        return new bluetooth_1.Service(uuid);
     };
     NobleAdapter.prototype.convertCharacteristic = function (service, characteristic) {
         var uuid = utils_1.shortenUUID(characteristic.uuid);
         var converted = new bluetooth_1.Characteristic(uuid);
-        converted.path = service.path + "/" + uuid;
+        converted.path = service.uuid + "/" + uuid;
         converted.properties = this.convertCharacteristicProperties(characteristic);
         converted.value = [];
         return converted;
@@ -557,8 +555,8 @@ var NobleAdapter = (function (_super) {
             broadcast: props.includes('broadcast'),
             read: props.includes('read'),
             write: props.includes('write'),
-            write_wo_resp: props.includes('writeWithoutResponse'),
-            auth_signed_wr: props.includes('authenticatedSignedWrites'),
+            writeWithoutResponse: props.includes('writeWithoutResponse'),
+            authorizedSignedWrite: props.includes('authenticatedSignedWrites'),
             notify: props.includes('notify'),
             indicate: props.includes('indicate'),
         };

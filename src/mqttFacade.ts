@@ -1,6 +1,6 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
+import { BLEDevice, Characteristic, Descriptor, Service, Services } from './interfaces/bluetooth';
 import {
 	CharacteristicEvent,
 	DescriptorEvent,
@@ -9,10 +9,8 @@ import {
 	DeviceDiscoverEvent,
 	ErrorEvent,
 	EventType,
-	G2CDevice,
 	G2CEvent,
 } from './interfaces/g2c';
-import { convertServices } from './utils';
 
 
 export class MqttFacade {
@@ -68,12 +66,11 @@ export class MqttFacade {
 		this.publishG2CEvent(event);
 	}
 
-	reportDiscover(deviceId: string, services: Service[]) {
-		const convertedServices = convertServices(services);
+	reportDiscover(deviceId: string, services: Services) {
 		const discoverEvent: DeviceDiscoverEvent = {
 			type: EventType.DeviceDiscover,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
-			services: convertedServices,
+			services: services,
 		};
 		this.publishG2CEvent(discoverEvent);
 	}
@@ -156,7 +153,7 @@ export class MqttFacade {
 		this.mqttClient.publish(topic, message);
 	}
 
-	private buildDeviceObjectForEvent(deviceId: string, connected: boolean): G2CDevice {
+	private buildDeviceObjectForEvent(deviceId: string, connected: boolean): BLEDevice {
 		return {
 			address: {
 				address: deviceId,

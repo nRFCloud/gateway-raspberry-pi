@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var g2c_1 = require("./interfaces/g2c");
-var utils_1 = require("./utils");
 var MqttFacade = (function () {
     function MqttFacade(mqttClient, g2cTopic, gatewayId) {
         this.messageId = 0;
@@ -51,11 +50,10 @@ var MqttFacade = (function () {
         this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportDiscover = function (deviceId, services) {
-        var convertedServices = utils_1.convertServices(services);
         var discoverEvent = {
             type: g2c_1.EventType.DeviceDiscover,
             device: this.buildDeviceObjectForEvent(deviceId, true),
-            services: convertedServices,
+            services: services,
         };
         this.publishG2CEvent(discoverEvent);
     };

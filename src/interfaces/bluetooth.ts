@@ -1,8 +1,7 @@
 export class Descriptor {
 	uuid: string;
-	value: number[];
-	handle: number;
 	path: string;
+	value: number[];
 
 	constructor(uuid: string, characteristicUuid: string = null, serviceUuid: string = null) {
 		this.uuid = uuid;
@@ -16,21 +15,23 @@ export class Descriptor {
 export class CharacteristicProperties {
 	broadcast: boolean;
 	read: boolean;
-	write_wo_resp: boolean;
+	writeWithoutResponse: boolean;
 	write: boolean;
 	notify: boolean;
 	indicate: boolean;
-	auth_signed_wr: boolean;
+	authorizedSignedWrite: boolean;
+}
+
+export interface CharacteristicDescriptors {
+	[key: string]: Descriptor;
 }
 
 export class Characteristic {
 	uuid: string;
-	value: number[];
-	descriptors?: Descriptor[];
-	declarationHandle: number;
-	valueHandle: number;
-	properties: CharacteristicProperties;
 	path: string;
+	value: number[];
+	properties: CharacteristicProperties;
+	descriptors: CharacteristicDescriptors;
 
 	constructor(uuid: string, serviceUuid: string = null) {
 		this.uuid = uuid;
@@ -41,14 +42,34 @@ export class Characteristic {
 	}
 }
 
+export interface ServiceCharacteristics {
+	[key: string]: Characteristic;
+}
+
 export class Service {
-	characteristics: Characteristic[];
 	uuid: string;
-	startHandle: number;
-	endHandle: number;
-	path: string;
+	characteristics: ServiceCharacteristics;
 
 	constructor(uuid: string) {
 		this.uuid = uuid;
 	}
+}
+
+export interface Services {
+	[key: string]: Service;
+}
+
+interface BLEAddress {
+	address: string;
+	type: string;
+}
+
+interface BLEDeviceConnectionStatus {
+	connected: boolean;
+}
+
+export interface BLEDevice {
+	id: string;
+	address: BLEAddress;
+	status: BLEDeviceConnectionStatus;
 }

@@ -4,7 +4,7 @@ import { Advertisement, Peripheral, Service as NobleService, Characteristic as N
 import { AdapterEvent, BluetoothAdapter } from '../bluetoothAdapter';
 import { AdvertisementData, DeviceScanResult } from '../interfaces/scanResult';
 import { Address } from '../interfaces/device';
-import { Characteristic, CharacteristicProperties, Descriptor, Service } from '../interfaces/bluetooth';
+import { Characteristic, CharacteristicProperties, Descriptor, Service, Services } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
 
 function formatUUIDIfNecessary(uuid) {
@@ -143,14 +143,14 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
-	async discover(id: string): Promise<Service[]> {
+	async discover(id: string): Promise<Services> {
 		if (this.gatewayState.discovering) {
 			console.log('already doing a discover');
 			return;
 		}
 		this.gatewayState.discovering = true;
 		await this.connect(id);
-		const returned = [];
+		const returned: Services = {};
 		const services: NobleService[] = await this.discoverAllServices(id);
 
 		for (const service of services) {
@@ -158,21 +158,21 @@ export class NobleAdapter extends BluetoothAdapter {
 				const characteristics = service.characteristics;
 
 				const converted = this.convertService(service);
-				converted.characteristics = [];
+				converted.characteristics = {};
 				for (const characteristic of characteristics) {
 
 					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
 					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
-					convertedCharacteristic.descriptors = [];
+					convertedCharacteristic.descriptors = {};
 					const descriptors = await this.discoverDescriptors(id, service.uuid, characteristic.uuid);
 					for (const descriptor of descriptors) {
 						const convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
 						convertedDescriptor.value = await this.readDescriptorValue(id, convertedDescriptor);
-						convertedCharacteristic.descriptors.push(convertedDescriptor);
+						convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
 					}
-					converted.characteristics.push(convertedCharacteristic);
+					converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
 				}
-				returned.push(converted);
+				returned[converted.uuid] = converted;
 			} catch (err) {
 				console.error('Error discovering characteristics', err);
 			}
@@ -327,15 +327,13 @@ export class NobleAdapter extends BluetoothAdapter {
 
 	private convertService(service: NobleService): Service {
 		const uuid = shortenUUID(service.uuid);
-		const returned = new Service(uuid);
-		returned.path = uuid;
-		return returned;
+		return new Service(uuid);
 	}
 
 	private convertCharacteristic(service: Service, characteristic: NobleCharacteristic): Characteristic {
 		const uuid = shortenUUID(characteristic.uuid);
 		const converted = new Characteristic(uuid);
-		converted.path = `${service.path}/${uuid}`;
+		converted.path = `${service.uuid}/${uuid}`;
 		converted.properties = this.convertCharacteristicProperties(characteristic);
 		converted.value = [];
 		return converted;
@@ -347,8 +345,8 @@ export class NobleAdapter extends BluetoothAdapter {
 			broadcast: props.includes('broadcast'),
 			read: props.includes('read'),
 			write: props.includes('write'),
-			write_wo_resp: props.includes('writeWithoutResponse'),
-			auth_signed_wr: props.includes('authenticatedSignedWrites'),
+			writeWithoutResponse: props.includes('writeWithoutResponse'),
+			authorizedSignedWrite: props.includes('authenticatedSignedWrites'),
 			notify: props.includes('notify'),
 			indicate: props.includes('indicate'),
 		};
