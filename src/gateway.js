@@ -349,6 +349,7 @@ var Gateway = (function (_super) {
     Gateway.prototype.doDescriptorWrite = function (op) {
         return __awaiter(this, void 0, void 0, function () {
             var descriptor, characteristic, err_4;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -358,7 +359,9 @@ var Gateway = (function (_super) {
                         if (!(descriptor.uuid === '2902')) return [3, 5];
                         characteristic = new bluetooth_1.Characteristic(op.characteristicUUID, op.serviceUUID);
                         if (!(descriptor.value.length > 0 && descriptor.value[0])) return [3, 2];
-                        return [4, this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic)];
+                        return [4, this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic, function (characteristic) {
+                                _this.mqttFacade.reportCharacteristicChanged(op.deviceAddress, characteristic);
+                            })];
                     case 1:
                         _a.sent();
                         return [3, 4];

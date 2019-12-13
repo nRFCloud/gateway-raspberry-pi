@@ -1,6 +1,6 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { DeviceScanResult } from './interfaces/scanResult';
-import { BLEDevice, Characteristic, Descriptor, Service, Services } from './interfaces/bluetooth';
+import { BLEDevice, Characteristic, Descriptor, Services } from './interfaces/bluetooth';
 import {
 	CharacteristicEvent,
 	DescriptorEvent,
@@ -104,6 +104,15 @@ export class MqttFacade {
 	reportCharacteristicWrite(deviceId: string, characteristic: Characteristic) {
 		const event: CharacteristicEvent = {
 			type: EventType.CharacteristicValueWrite,
+			characteristic,
+			device: this.buildDeviceObjectForEvent(deviceId, true),
+		};
+		this.publishG2CEvent(event);
+	}
+
+	reportCharacteristicChanged(deviceId: string, characteristic: Characteristic) {
+		const event: CharacteristicEvent = {
+			type: EventType.CharacteristicValueChanged,
 			characteristic,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
 		};

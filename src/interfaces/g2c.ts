@@ -1,7 +1,8 @@
 import { BLEDevice, Characteristic, Descriptor, Services } from './bluetooth';
 
 export enum EventType {
-	DescriptorValueWrite= 'device_descriptor_value_write_result',
+	CharacteristicValueChanged = 'device_characteristic_value_changed',
+	DescriptorValueWrite = 'device_descriptor_value_write_result',
 	DescriptorValueRead = 'device_descriptor_value_read_result',
 	CharacteristicValueWrite = 'device_characteristic_value_write_result',
 	CharacteristicValueRead = 'device_characteristic_value_read_result',
@@ -26,7 +27,7 @@ export interface DeviceDiscoverEvent extends DeviceEvent {
 }
 
 export interface CharacteristicEvent extends DeviceEvent {
-	type: EventType.CharacteristicValueRead | EventType.CharacteristicValueWrite;
+	type: EventType.CharacteristicValueRead | EventType.CharacteristicValueWrite | EventType.CharacteristicValueChanged;
 	characteristic: Characteristic;
 }
 

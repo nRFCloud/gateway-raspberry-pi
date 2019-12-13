@@ -57,7 +57,7 @@ export class ExampleAdapter extends BluetoothAdapter {
 		return undefined;
 	}
 
-	subscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+	subscribe(deviceId: string, characteristic: Characteristic, callback): Promise<void> {
 		return undefined;
 	}
 

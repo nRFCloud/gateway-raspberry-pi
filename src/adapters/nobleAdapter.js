@@ -12,6 +12,17 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -245,9 +256,9 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.discover = function (id) {
         return __awaiter(this, void 0, void 0, function () {
-            var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, _b, descriptors, _c, descriptors_1, descriptor, convertedDescriptor, _d, err_1;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
+            var returned, services, _i, services_1, service, characteristics, converted, _a, characteristics_1, characteristic, convertedCharacteristic, descriptors, _b, descriptors_1, descriptor, convertedDescriptor, err_1;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         if (this.gatewayState.discovering) {
                             console.log('already doing a discover');
@@ -256,87 +267,75 @@ var NobleAdapter = (function (_super) {
                         this.gatewayState.discovering = true;
                         return [4, this.connect(id)];
                     case 1:
-                        _e.sent();
+                        _c.sent();
                         returned = {};
                         return [4, this.discoverAllServices(id)];
                     case 2:
-                        services = _e.sent();
+                        services = _c.sent();
                         _i = 0, services_1 = services;
-                        _e.label = 3;
+                        _c.label = 3;
                     case 3:
-                        if (!(_i < services_1.length)) return [3, 16];
+                        if (!(_i < services_1.length)) return [3, 11];
                         service = services_1[_i];
-                        _e.label = 4;
+                        _c.label = 4;
                     case 4:
-                        _e.trys.push([4, 14, , 15]);
+                        _c.trys.push([4, 9, , 10]);
                         characteristics = service.characteristics;
                         converted = this.convertService(service);
                         converted.characteristics = {};
                         _a = 0, characteristics_1 = characteristics;
-                        _e.label = 5;
+                        _c.label = 5;
                     case 5:
-                        if (!(_a < characteristics_1.length)) return [3, 13];
+                        if (!(_a < characteristics_1.length)) return [3, 8];
                         characteristic = characteristics_1[_a];
                         convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
-                        _b = convertedCharacteristic;
-                        return [4, this.readCharacteristicValue(id, convertedCharacteristic)];
-                    case 6:
-                        _b.value = _e.sent();
+                        convertedCharacteristic.value = [];
                         convertedCharacteristic.descriptors = {};
                         return [4, this.discoverDescriptors(id, service.uuid, characteristic.uuid)];
-                    case 7:
-                        descriptors = _e.sent();
-                        _c = 0, descriptors_1 = descriptors;
-                        _e.label = 8;
-                    case 8:
-                        if (!(_c < descriptors_1.length)) return [3, 11];
-                        descriptor = descriptors_1[_c];
-                        convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
-                        _d = convertedDescriptor;
-                        return [4, this.readDescriptorValue(id, convertedDescriptor)];
-                    case 9:
-                        _d.value = _e.sent();
-                        convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
-                        _e.label = 10;
-                    case 10:
-                        _c++;
-                        return [3, 8];
-                    case 11:
+                    case 6:
+                        descriptors = _c.sent();
+                        for (_b = 0, descriptors_1 = descriptors; _b < descriptors_1.length; _b++) {
+                            descriptor = descriptors_1[_b];
+                            convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
+                            convertedDescriptor.value = [];
+                            convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
+                        }
                         converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
-                        _e.label = 12;
-                    case 12:
+                        _c.label = 7;
+                    case 7:
                         _a++;
                         return [3, 5];
-                    case 13:
+                    case 8:
                         returned[converted.uuid] = converted;
-                        return [3, 15];
-                    case 14:
-                        err_1 = _e.sent();
+                        return [3, 10];
+                    case 9:
+                        err_1 = _c.sent();
                         console.error('Error discovering characteristics', err_1);
-                        return [3, 15];
-                    case 15:
+                        return [3, 10];
+                    case 10:
                         _i++;
                         return [3, 3];
-                    case 16:
+                    case 11:
                         this.gatewayState.discovering = false;
                         return [2, returned];
                 }
             });
         });
     };
-    NobleAdapter.prototype.reportDataChanged = function (characteristic, data, isNotification) {
-        console.log("got data for " + characteristic.uuid, data, isNotification);
-    };
-    NobleAdapter.prototype.subscribe = function (deviceId, characteristic) {
+    NobleAdapter.prototype.subscribe = function (deviceId, characteristic, callback) {
         return __awaiter(this, void 0, void 0, function () {
             var nobleChar;
-            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4, this.getNobleCharacteristic(deviceId, characteristic)];
                     case 1:
                         nobleChar = _a.sent();
-                        nobleChar.on('data', function (data, isNotification) { return _this.reportDataChanged(characteristic, data, isNotification); });
+                        nobleChar.on('data', function (data, isNotification) {
+                            if (isNotification) {
+                                var result = __assign(__assign({}, characteristic), { value: data && Array.from(data) });
+                                callback(result);
+                            }
+                        });
                         return [2, new Promise(function (resolve, reject) {
                                 nobleChar.subscribe(function (error) {
                                     if (error) {

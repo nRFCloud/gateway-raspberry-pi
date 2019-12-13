@@ -89,6 +89,7 @@ export class Gateway extends EventEmitter {
 			this.deviceConnections[deviceId] = true;
 			this.reportConnectionUp(deviceId);
 		});
+
 		this.bluetoothAdapter.on(AdapterEvent.DeviceDisconnected, (deviceId) => {
 			if (typeof this.deviceConnections[deviceId] !== 'undefined') {
 				this.deviceConnections[deviceId] = false;
@@ -275,7 +276,9 @@ export class Gateway extends EventEmitter {
 			if (descriptor.uuid === '2902') {
 				const characteristic = new Characteristic(op.characteristicUUID, op.serviceUUID);
 				if (descriptor.value.length > 0 && descriptor.value[0]) {
-					await this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic);
+					await this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic, (characteristic: Characteristic) => {
+						this.mqttFacade.reportCharacteristicChanged(op.deviceAddress, characteristic);
+					});
 				} else {
 					await this.bluetoothAdapter.unsubscribe(op.deviceAddress, characteristic);
 				}

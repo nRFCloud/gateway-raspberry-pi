@@ -158,14 +158,14 @@ export class NobleAdapter extends BluetoothAdapter {
 				const converted = this.convertService(service);
 				converted.characteristics = {};
 				for (const characteristic of characteristics) {
-
+					//I think there's an infinite loop in the read value stuff
 					const convertedCharacteristic = this.convertCharacteristic(converted, characteristic);
-					convertedCharacteristic.value = await this.readCharacteristicValue(id, convertedCharacteristic);
+					convertedCharacteristic.value = []; //await this.readCharacteristicValue(id, convertedCharacteristic);
 					convertedCharacteristic.descriptors = {};
 					const descriptors = await this.discoverDescriptors(id, service.uuid, characteristic.uuid);
 					for (const descriptor of descriptors) {
 						const convertedDescriptor = this.convertDescriptor(convertedCharacteristic, descriptor);
-						convertedDescriptor.value = await this.readDescriptorValue(id, convertedDescriptor);
+						convertedDescriptor.value = []; //await this.readDescriptorValue(id, convertedDescriptor);
 						convertedCharacteristic.descriptors[convertedDescriptor.uuid] = convertedDescriptor;
 					}
 					converted.characteristics[convertedCharacteristic.uuid] = convertedCharacteristic;
@@ -179,13 +179,14 @@ export class NobleAdapter extends BluetoothAdapter {
 		return returned;
 	}
 
-	private reportDataChanged(characteristic: Characteristic, data, isNotification) {
-		console.log(`got data for ${characteristic.uuid}`, data, isNotification);
-	}
-
-	async subscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+	async subscribe(deviceId: string, characteristic: Characteristic, callback: (characteristic:Characteristic) => void): Promise<void> {
 		const nobleChar = await this.getNobleCharacteristic(deviceId, characteristic);
-		nobleChar.on('data', (data, isNotification) => this.reportDataChanged(characteristic, data, isNotification));
+		nobleChar.on('data', (data, isNotification) => {
+			if (isNotification) {
+				const result: Characteristic = {...characteristic, value: data && Array.from(data)};
+				callback(result);
+			}
+		});
 		return new Promise<void>((resolve, reject) => {
 			nobleChar.subscribe((error) => {
 				if (error) {

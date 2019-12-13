@@ -52,7 +52,7 @@ var ExampleAdapter = (function (_super) {
     ExampleAdapter.prototype.writeDescriptorValue = function (deviceId, descriptor) {
         return undefined;
     };
-    ExampleAdapter.prototype.subscribe = function (deviceId, characteristic) {
+    ExampleAdapter.prototype.subscribe = function (deviceId, characteristic, callback) {
         return undefined;
     };
     ExampleAdapter.prototype.unsubscribe = function (deviceId, characteristic) {
