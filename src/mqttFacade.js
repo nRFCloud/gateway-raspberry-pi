@@ -1,16 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var EventType;
-(function (EventType) {
-    EventType["DescriptorValueWrite"] = "device_descriptor_value_write_result";
-    EventType["DescriptorValueRead"] = "device_descriptor_value_read_result";
-    EventType["CharacteristicValueWrite"] = "device_characteristic_value_write_result";
-    EventType["CharacteristicValueRead"] = "device_characteristic_value_read_result";
-    EventType["DeviceDiscover"] = "device_discover_result";
-    EventType["DeviceDisconnected"] = "device_disconnect";
-    EventType["ScanResult"] = "scan_result";
-    EventType["DeviceConnected"] = "device_connect_result";
-})(EventType || (EventType = {}));
+var g2c_1 = require("./interfaces/g2c");
+var utils_1 = require("./utils");
 var MqttFacade = (function () {
     function MqttFacade(mqttClient, g2cTopic, gatewayId) {
         this.messageId = 0;
@@ -28,7 +19,7 @@ var MqttFacade = (function () {
     MqttFacade.prototype.handleScanResult = function (result, timeout) {
         if (timeout === void 0) { timeout = false; }
         var event = {
-            type: EventType.ScanResult,
+            type: g2c_1.EventType.ScanResult,
             subType: 'instant',
             devices: result ? [result] : [],
             timeout: timeout,
@@ -47,31 +38,32 @@ var MqttFacade = (function () {
     };
     MqttFacade.prototype.reportConnectionUp = function (deviceId) {
         var event = {
-            type: EventType.DeviceConnected,
+            type: g2c_1.EventType.DeviceConnected,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
         this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportConnectionDown = function (deviceId) {
         var event = {
-            type: EventType.DeviceDisconnected,
+            type: g2c_1.EventType.DeviceDisconnected,
             device: this.buildDeviceObjectForEvent(deviceId, false),
         };
         this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportDiscover = function (deviceId, services) {
+        var convertedServices = utils_1.convertServices(services);
         var discoverEvent = {
-            type: EventType.DeviceDiscover,
+            type: g2c_1.EventType.DeviceDiscover,
             device: this.buildDeviceObjectForEvent(deviceId, true),
-            services: services,
+            services: convertedServices,
         };
         this.publishG2CEvent(discoverEvent);
     };
     MqttFacade.prototype.reportError = function (err, id, code, deviceId) {
         code = typeof code !== 'undefined' ? code : -1;
         err = typeof err === 'object' && err !== null ? JSON.stringify(err) : err;
-        this.publishG2CEvent({
-            type: 'error',
+        var event = {
+            type: g2c_1.EventType.Error,
             error: {
                 description: err,
                 code: code,
@@ -79,11 +71,12 @@ var MqttFacade = (function () {
             device: deviceId ? {
                 deviceAddress: deviceId,
             } : undefined,
-        });
+        };
+        this.publishG2CEvent(event);
     };
     MqttFacade.prototype.reportCharacteristicRead = function (deviceId, characteristic) {
         var charEvent = {
-            type: EventType.CharacteristicValueRead,
+            type: g2c_1.EventType.CharacteristicValueRead,
             characteristic: characteristic,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
@@ -91,7 +84,7 @@ var MqttFacade = (function () {
     };
     MqttFacade.prototype.reportCharacteristicWrite = function (deviceId, characteristic) {
         var event = {
-            type: EventType.CharacteristicValueWrite,
+            type: g2c_1.EventType.CharacteristicValueWrite,
             characteristic: characteristic,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
@@ -99,7 +92,7 @@ var MqttFacade = (function () {
     };
     MqttFacade.prototype.reportDescriptorRead = function (deviceId, descriptor) {
         var event = {
-            type: EventType.DescriptorValueRead,
+            type: g2c_1.EventType.DescriptorValueRead,
             descriptor: descriptor,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };
@@ -107,7 +100,7 @@ var MqttFacade = (function () {
     };
     MqttFacade.prototype.reportDescriptorWrite = function (deviceId, descriptor) {
         var event = {
-            type: EventType.DescriptorValueWrite,
+            type: g2c_1.EventType.DescriptorValueWrite,
             descriptor: descriptor,
             device: this.buildDeviceObjectForEvent(deviceId, true),
         };

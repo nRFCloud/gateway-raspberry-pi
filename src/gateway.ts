@@ -51,7 +51,7 @@ export class Gateway extends EventEmitter {
 	private isTryingConnection: boolean = false;
 	private lastTriedAddress: string = null;
 
-	private discoveryCache: {[key: string]: {[key: string]: Service}} = {};
+	private discoveryCache: {[key: string]: Service[]} = {};
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;

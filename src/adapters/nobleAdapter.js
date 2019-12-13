@@ -257,7 +257,7 @@ var NobleAdapter = (function (_super) {
                         return [4, this.connect(id)];
                     case 1:
                         _e.sent();
-                        returned = {};
+                        returned = [];
                         return [4, this.discoverAllServices(id)];
                     case 2:
                         services = _e.sent();
@@ -308,7 +308,7 @@ var NobleAdapter = (function (_super) {
                         _a++;
                         return [3, 5];
                     case 13:
-                        returned[converted.uuid] = converted;
+                        returned.push(converted);
                         return [3, 15];
                     case 14:
                         err_1 = _e.sent();

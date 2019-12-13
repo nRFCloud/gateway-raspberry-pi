@@ -45,9 +45,9 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	/**
 	 * Discover and read all values of the given device
 	 * @param id Device ID to discover
-	 * @returns {[key: string]: Service} A map of service UUIDs to services
+	 * @returns Service[] An array of services
 	 */
-	abstract discover(id: string): Promise<{[key: string]: Service}>;
+	abstract discover(id: string): Promise<Service[]>;
 
 	/**
 	 * Reads a characteristic value from a device

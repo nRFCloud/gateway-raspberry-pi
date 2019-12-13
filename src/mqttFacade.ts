@@ -1,17 +1,19 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { DeviceScanResult } from './interfaces/scanResult';
 import { Characteristic, Descriptor, Service } from './interfaces/bluetooth';
+import {
+	CharacteristicEvent,
+	DescriptorEvent,
+	DeviceConnectedEvent,
+	DeviceDisconnectedEvent,
+	DeviceDiscoverEvent,
+	ErrorEvent,
+	EventType,
+	G2CDevice,
+	G2CEvent,
+} from './interfaces/g2c';
+import { convertServices } from './utils';
 
-enum EventType {
-	DescriptorValueWrite= 'device_descriptor_value_write_result',
-	DescriptorValueRead = 'device_descriptor_value_read_result',
-	CharacteristicValueWrite = 'device_characteristic_value_write_result',
-	CharacteristicValueRead = 'device_characteristic_value_read_result',
-	DeviceDiscover = 'device_discover_result',
-	DeviceDisconnected = 'device_disconnect',
-	ScanResult = 'scan_result',
-	DeviceConnected = 'device_connect_result', //I don't know why this doesn't follow the convention of the disconnected event
-}
 
 export class MqttFacade {
 	private readonly mqttClient;
@@ -51,7 +53,7 @@ export class MqttFacade {
 	}
 
 	reportConnectionUp(deviceId: string) {
-		const event = {
+		const event: DeviceConnectedEvent = {
 			type: EventType.DeviceConnected,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
 		};
@@ -59,18 +61,19 @@ export class MqttFacade {
 	}
 
 	reportConnectionDown(deviceId: string) {
-		const event = {
+		const event: DeviceDisconnectedEvent = {
 			type: EventType.DeviceDisconnected,
 			device: this.buildDeviceObjectForEvent(deviceId, false),
 		};
 		this.publishG2CEvent(event);
 	}
 
-	reportDiscover(deviceId: string, services: {[key: string]: Service}) {
-		const discoverEvent = {
+	reportDiscover(deviceId: string, services: Service[]) {
+		const convertedServices = convertServices(services);
+		const discoverEvent: DeviceDiscoverEvent = {
 			type: EventType.DeviceDiscover,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
-			services,
+			services: convertedServices,
 		};
 		this.publishG2CEvent(discoverEvent);
 	}
@@ -78,8 +81,8 @@ export class MqttFacade {
 	reportError(err: any, id?: string, code?: number, deviceId?: string) {
 		code = typeof code !== 'undefined' ? code : -1;
 		err = typeof err === 'object' && err !== null ? JSON.stringify(err) : err;
-		this.publishG2CEvent({
-			type: 'error',
+		const event: ErrorEvent = {
+			type: EventType.Error,
 			error: {
 				description: err,
 				code,
@@ -87,11 +90,12 @@ export class MqttFacade {
 			device: deviceId ? {
 				deviceAddress: deviceId,
 			} : undefined,
-		});
+		};
+		this.publishG2CEvent(event);
 	}
 
-	reportCharacteristicRead(deviceId: string,characteristic: Characteristic) {
-		const charEvent = {
+	reportCharacteristicRead(deviceId: string, characteristic: Characteristic) {
+		const charEvent: CharacteristicEvent = {
 			type: EventType.CharacteristicValueRead,
 			characteristic,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
@@ -101,7 +105,7 @@ export class MqttFacade {
 
 
 	reportCharacteristicWrite(deviceId: string, characteristic: Characteristic) {
-		const event = {
+		const event: CharacteristicEvent = {
 			type: EventType.CharacteristicValueWrite,
 			characteristic,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
@@ -110,7 +114,7 @@ export class MqttFacade {
 	}
 
 	reportDescriptorRead(deviceId: string, descriptor: Descriptor) {
-		const event = {
+		const event: DescriptorEvent = {
 			type: EventType.DescriptorValueRead,
 			descriptor,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
@@ -119,7 +123,7 @@ export class MqttFacade {
 	}
 
 	reportDescriptorWrite(deviceId: string, descriptor: Descriptor) {
-		const event = {
+		const event: DescriptorEvent = {
 			type: EventType.DescriptorValueWrite,
 			descriptor,
 			device: this.buildDeviceObjectForEvent(deviceId, true),
@@ -127,7 +131,7 @@ export class MqttFacade {
 		this.publishG2CEvent(event);
 	}
 
-	private publishG2CEvent(event) {
+	private publishG2CEvent(event: G2CEvent) {
 		const g2cEvent = this.getG2CEvent(event);
 		this.publish(this.g2cTopic, g2cEvent);
 	}
@@ -152,7 +156,7 @@ export class MqttFacade {
 		this.mqttClient.publish(topic, message);
 	}
 
-	private buildDeviceObjectForEvent(deviceId: string, connected: boolean) {
+	private buildDeviceObjectForEvent(deviceId: string, connected: boolean): G2CDevice {
 		return {
 			address: {
 				address: deviceId,
@@ -164,7 +168,5 @@ export class MqttFacade {
 			},
 		};
 	}
-
-
 
 }

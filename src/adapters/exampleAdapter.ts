@@ -38,7 +38,7 @@ export class ExampleAdapter extends BluetoothAdapter {
 		return undefined;
 	}
 
-	discover(id: string): Promise<{[key: string]: Service}> {
+	discover(id: string): Promise<Service[]> {
 		return undefined;
 	}
 

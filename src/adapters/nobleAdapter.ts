@@ -143,14 +143,14 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
-	async discover(id: string): Promise<{[key: string]: Service}> {
+	async discover(id: string): Promise<Service[]> {
 		if (this.gatewayState.discovering) {
 			console.log('already doing a discover');
 			return;
 		}
 		this.gatewayState.discovering = true;
 		await this.connect(id);
-		const returned = {};
+		const returned = [];
 		const services: NobleService[] = await this.discoverAllServices(id);
 
 		for (const service of services) {
@@ -172,7 +172,7 @@ export class NobleAdapter extends BluetoothAdapter {
 					}
 					converted.characteristics.push(convertedCharacteristic);
 				}
-				returned[converted.uuid] = converted;
+				returned.push(converted);
 			} catch (err) {
 				console.error('Error discovering characteristics', err);
 			}
