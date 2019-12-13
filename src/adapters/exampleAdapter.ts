@@ -3,7 +3,6 @@ import { DeviceScanResult } from '../interfaces/scanResult';
 import { Characteristic, Descriptor, Service, Services } from '../interfaces/bluetooth';
 
 export class ExampleAdapter extends BluetoothAdapter {
-
 	startScan(
 		scanTimeout: number,
 		scanMode: "active" | "passive",
@@ -55,6 +54,14 @@ export class ExampleAdapter extends BluetoothAdapter {
 	}
 
 	writeDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<void> {
+		return undefined;
+	}
+
+	subscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+		return undefined;
+	}
+
+	unsubscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
 		return undefined;
 	}
 }

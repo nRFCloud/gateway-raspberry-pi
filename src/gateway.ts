@@ -266,11 +266,22 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//intercept "subscribe" events (writing to 2902) and instead setup/tear down a subscription
 	private async doDescriptorWrite(op: DescriptorWriteOperation) {
+
 		try {
 			const descriptor = new Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
 			descriptor.value = op.descriptorValue;
-			await this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor);
+			if (descriptor.uuid === '2902') {
+				const characteristic = new Characteristic(op.characteristicUUID, op.serviceUUID);
+				if (descriptor.value.length > 0 && descriptor.value[0]) {
+					await this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic);
+				} else {
+					await this.bluetoothAdapter.unsubscribe(op.deviceAddress, characteristic);
+				}
+			} else {
+				await this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor);
+			}
 			this.mqttFacade.reportDescriptorWrite(op.deviceAddress, descriptor);
 		} catch (err) {
 			this.mqttFacade.reportError(err);

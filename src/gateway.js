@@ -348,23 +348,37 @@ var Gateway = (function (_super) {
     };
     Gateway.prototype.doDescriptorWrite = function (op) {
         return __awaiter(this, void 0, void 0, function () {
-            var descriptor, err_4;
+            var descriptor, characteristic, err_4;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        _a.trys.push([0, 2, , 3]);
+                        _a.trys.push([0, 8, , 9]);
                         descriptor = new bluetooth_1.Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
                         descriptor.value = op.descriptorValue;
-                        return [4, this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor)];
+                        if (!(descriptor.uuid === '2902')) return [3, 5];
+                        characteristic = new bluetooth_1.Characteristic(op.characteristicUUID, op.serviceUUID);
+                        if (!(descriptor.value.length > 0 && descriptor.value[0])) return [3, 2];
+                        return [4, this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic)];
                     case 1:
                         _a.sent();
+                        return [3, 4];
+                    case 2: return [4, this.bluetoothAdapter.unsubscribe(op.deviceAddress, characteristic)];
+                    case 3:
+                        _a.sent();
+                        _a.label = 4;
+                    case 4: return [3, 7];
+                    case 5: return [4, this.bluetoothAdapter.writeDescriptorValue(op.deviceAddress, descriptor)];
+                    case 6:
+                        _a.sent();
+                        _a.label = 7;
+                    case 7:
                         this.mqttFacade.reportDescriptorWrite(op.deviceAddress, descriptor);
-                        return [3, 3];
-                    case 2:
+                        return [3, 9];
+                    case 8:
                         err_4 = _a.sent();
                         this.mqttFacade.reportError(err_4);
-                        return [3, 3];
-                    case 3: return [2];
+                        return [3, 9];
+                    case 9: return [2];
                 }
             });
         });

@@ -213,10 +213,10 @@ var NobleAdapter = (function (_super) {
                         if (['connected', 'connecting'].includes(peripheral.state)) {
                             return [2];
                         }
-                        peripheral.on('disconnect', function () {
+                        peripheral.once('disconnect', function () {
                             _this.emit(bluetoothAdapter_1.AdapterEvent.DeviceDisconnected, id);
                         });
-                        peripheral.on('connect', function () {
+                        peripheral.once('connect', function () {
                             _this.emit(bluetoothAdapter_1.AdapterEvent.DeviceConnected, id);
                         });
                         return [2, new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
@@ -320,6 +320,56 @@ var NobleAdapter = (function (_super) {
                     case 16:
                         this.gatewayState.discovering = false;
                         return [2, returned];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.reportDataChanged = function (characteristic, data, isNotification) {
+        console.log("got data for " + characteristic.uuid, data, isNotification);
+    };
+    NobleAdapter.prototype.subscribe = function (deviceId, characteristic) {
+        return __awaiter(this, void 0, void 0, function () {
+            var nobleChar;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getNobleCharacteristic(deviceId, characteristic)];
+                    case 1:
+                        nobleChar = _a.sent();
+                        nobleChar.on('data', function (data, isNotification) { return _this.reportDataChanged(characteristic, data, isNotification); });
+                        return [2, new Promise(function (resolve, reject) {
+                                nobleChar.subscribe(function (error) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve();
+                                    }
+                                });
+                            })];
+                }
+            });
+        });
+    };
+    NobleAdapter.prototype.unsubscribe = function (deviceId, characteristic) {
+        return __awaiter(this, void 0, void 0, function () {
+            var nobleChar;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getNobleCharacteristic(deviceId, characteristic)];
+                    case 1:
+                        nobleChar = _a.sent();
+                        nobleChar.removeAllListeners('data');
+                        return [2, new Promise(function (resolve, reject) {
+                                nobleChar.unsubscribe(function (error) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve();
+                                    }
+                                });
+                            })];
                 }
             });
         });

@@ -12,8 +12,6 @@ function formatUUIDIfNecessary(uuid) {
 }
 
 export class NobleAdapter extends BluetoothAdapter {
-
-
 	private peripheralEntries: {[key: string]: Peripheral} = {};
 	private serviceEntries: {[key: string]: NobleService} = {};
 	private characteristicEntries: {[key: string]: NobleCharacteristic} = {};
@@ -124,10 +122,10 @@ export class NobleAdapter extends BluetoothAdapter {
 		if (['connected', 'connecting'].includes(peripheral.state)) {
 			return;
 		}
-		peripheral.on('disconnect', () => {
+		peripheral.once('disconnect', () => {
 			this.emit(AdapterEvent.DeviceDisconnected, id);
 		});
-		peripheral.on('connect', () => {
+		peripheral.once('connect', () => {
 			this.emit(AdapterEvent.DeviceConnected, id);
 		});
 		return new Promise<any>(async (resolve, reject) => {
@@ -179,6 +177,38 @@ export class NobleAdapter extends BluetoothAdapter {
 		}
 		this.gatewayState.discovering = false;
 		return returned;
+	}
+
+	private reportDataChanged(characteristic: Characteristic, data, isNotification) {
+		console.log(`got data for ${characteristic.uuid}`, data, isNotification);
+	}
+
+	async subscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+		const nobleChar = await this.getNobleCharacteristic(deviceId, characteristic);
+		nobleChar.on('data', (data, isNotification) => this.reportDataChanged(characteristic, data, isNotification));
+		return new Promise<void>((resolve, reject) => {
+			nobleChar.subscribe((error) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve();
+				}
+			});
+		});
+	}
+
+	async unsubscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+		const nobleChar = await this.getNobleCharacteristic(deviceId, characteristic);
+		nobleChar.removeAllListeners('data');
+		return new Promise<void>((resolve, reject) => {
+			nobleChar.unsubscribe((error) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve();
+				}
+			});
+		});
 	}
 
 	private async getDeviceById(deviceId: string): Promise<Peripheral> {
