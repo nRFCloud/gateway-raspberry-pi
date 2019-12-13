@@ -4,7 +4,7 @@ import isEqual from 'lodash/isEqual';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
-import { Characteristic, Descriptor, Service, Services } from './interfaces/bluetooth';
+import { Characteristic, Descriptor, Services } from './interfaces/bluetooth';
 import {
 	C2GEventType,
 	CharacteristicOperation,
@@ -32,14 +32,15 @@ export type GatewayConfiguration = {
 	stage?: string;
 	tenantId?: string;
 	bluetoothAdapter: BluetoothAdapter;
+	protocol?: 'mqtts' | 'wss';
+	accessKeyId?: string;
+	secretKey?: string;
+	sessionToken?: string;
+	debug?: boolean;
 }
 
 export class Gateway extends EventEmitter {
-	readonly keyPath: string;
-	readonly certPath: string;
-	readonly caPath: string;
 	readonly gatewayId: string;
-	readonly host: string;
 	readonly stage: string;
 	readonly tenantId: string;
 	readonly gatewayDevice: awsIot.device;
@@ -76,11 +77,7 @@ export class Gateway extends EventEmitter {
 	constructor(config: GatewayConfiguration) {
 		super();
 		console.info('got config object', config);
-		this.keyPath = config.keyPath;
-		this.certPath = config.certPath;
-		this.caPath = config.caPath;
 		this.gatewayId = config.gatewayId;
-		this.host = config.host;
 		this.stage = config.stage;
 		this.tenantId = config.tenantId;
 		this.bluetoothAdapter = config.bluetoothAdapter;
@@ -98,11 +95,16 @@ export class Gateway extends EventEmitter {
 		});
 
 		this.gatewayDevice = new awsIot.device({
-			keyPath: this.keyPath,
-			certPath: this.certPath,
-			caPath: this.caPath,
+			keyPath: config.keyPath,
+			certPath: config.certPath,
+			caPath: config.caPath,
 			clientId: this.gatewayId,
-			host: this.host,
+			host: config.host,
+			protocol: config.protocol || (config.accessKeyId ? 'wss' : 'mqtts'), //if not set, try to guess
+			accessKeyId: config.accessKeyId,
+			secretKey: config.secretKey,
+			sessionToken: config.sessionToken,
+			debug: !!config.debug,
 		});
 
 		this.gatewayDevice.on('connect', () => {
@@ -144,8 +146,7 @@ export class Gateway extends EventEmitter {
 		switch (op.type) {
 			case C2GEventType.Scan: //Do a bluetooth scan
 				assumeType<ScanOperation>(op);
-				this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
-
+				this.startScan(op);
 				break;
 			case C2GEventType.PerformDiscover: //Do a discover AND full value read
 				assumeType<DeviceOperation>(op);
@@ -293,24 +294,18 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
-	/**
-	 *
-	 * @param scanTimeout When the scan should timeout, in seconds (default 3)
-	 * @param scanMode Scan mode: active or passive (default active)
-	 * @param scanType Type of scan: 0 for "regular", 1 for "beacons" (default 0)
-	 * @param scanInterval Ignored
-	 * @param scanReporting When results should be reported: "instant" or "batch" (default instant)
-	 * @param filter An object: {rssi, name}. If set, results should only be reported if they are higher then sent rssi and/or match name
-	 */
 	private startScan(
-		scanTimeout: number = 3,
-		scanMode: 'active' | 'passive' = 'active',
-		scanType: 0 | 1 = 0,
-		scanInterval: number = 0,
-		scanReporting: 'instant' | 'batch' = 'instant',
-		filter?: {rssi?: number, name?: string}
+		op: ScanOperation
 	) {
-		this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, (result, timedout = false) => this.mqttFacade.handleScanResult(result, timedout));
+		this.bluetoothAdapter.startScan(
+			op.scanTimeout,
+			op.scanMode,
+			op.scanType,
+			op.scanInterval,
+			op.scanReporting,
+			op.filter,
+			(result, timedout = false) => this.mqttFacade.handleScanResult(result, timedout)
+		);
 	}
 
 	private async updateDeviceConnections(connections: string[]) {
@@ -405,7 +400,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
-	private stopDeviceConnections() {
+	public stopDeviceConnections() {
 		clearInterval(this.deviceConnectionIntervalHolder);
 		this.deviceConnectionIntervalHolder = null;
 	}

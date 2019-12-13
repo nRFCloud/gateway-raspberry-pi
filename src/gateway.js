@@ -95,11 +95,7 @@ var Gateway = (function (_super) {
         _this.lastTriedAddress = null;
         _this.discoveryCache = {};
         console.info('got config object', config);
-        _this.keyPath = config.keyPath;
-        _this.certPath = config.certPath;
-        _this.caPath = config.caPath;
         _this.gatewayId = config.gatewayId;
-        _this.host = config.host;
         _this.stage = config.stage;
         _this.tenantId = config.tenantId;
         _this.bluetoothAdapter = config.bluetoothAdapter;
@@ -114,11 +110,16 @@ var Gateway = (function (_super) {
             }
         });
         _this.gatewayDevice = new awsIot.device({
-            keyPath: _this.keyPath,
-            certPath: _this.certPath,
-            caPath: _this.caPath,
+            keyPath: config.keyPath,
+            certPath: config.certPath,
+            caPath: config.caPath,
             clientId: _this.gatewayId,
-            host: _this.host,
+            host: config.host,
+            protocol: config.protocol || (config.accessKeyId ? 'wss' : 'mqtts'),
+            accessKeyId: config.accessKeyId,
+            secretKey: config.secretKey,
+            sessionToken: config.sessionToken,
+            debug: !!config.debug,
         });
         _this.gatewayDevice.on('connect', function () {
             console.log('connect');
@@ -187,7 +188,7 @@ var Gateway = (function (_super) {
         switch (op.type) {
             case c2g_1.C2GEventType.Scan:
                 utils_1.assumeType(op);
-                this.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter);
+                this.startScan(op);
                 break;
             case c2g_1.C2GEventType.PerformDiscover:
                 utils_1.assumeType(op);
@@ -388,14 +389,9 @@ var Gateway = (function (_super) {
             });
         });
     };
-    Gateway.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter) {
+    Gateway.prototype.startScan = function (op) {
         var _this = this;
-        if (scanTimeout === void 0) { scanTimeout = 3; }
-        if (scanMode === void 0) { scanMode = 'active'; }
-        if (scanType === void 0) { scanType = 0; }
-        if (scanInterval === void 0) { scanInterval = 0; }
-        if (scanReporting === void 0) { scanReporting = 'instant'; }
-        this.bluetoothAdapter.startScan(scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, function (result, timedout) {
+        this.bluetoothAdapter.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter, function (result, timedout) {
             if (timedout === void 0) { timedout = false; }
             return _this.mqttFacade.handleScanResult(result, timedout);
         });
