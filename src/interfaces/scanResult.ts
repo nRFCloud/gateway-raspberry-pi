@@ -1,13 +1,6 @@
-import { Address } from './device';
+import { AdvertisementPacket } from 'beacon-utilities';
 
-export class AdvertisementData {
-	advertiseFlag: number;
-	serviceUuids: string[];
-	localName: string;
-	txPower: number;
-	manufacturerData: {[key: number]: number[]} | number[]; //the front end will correctly handle parsed data or just the byte array
-	serviceData: {[key: string]: number[]};
-}
+import { Address } from './device';
 
 export class DeviceScanResult {
 	name: string;
@@ -17,5 +10,5 @@ export class DeviceScanResult {
 	deviceType: string = 'BLE';
 	address: Address;
 	serviceUUIDs: string[];
-	advertisementData: AdvertisementData;
+	advertisementData: AdvertisementPacket;
 }

@@ -1,8 +1,18 @@
 import noble from '@abandonware/noble';
-import { Advertisement, Peripheral, Service as NobleService, Characteristic as NobleCharacteristic, Descriptor as NobleDescriptor } from 'noble';
+import {
+	Advertisement,
+	Characteristic as NobleCharacteristic,
+	Descriptor as NobleDescriptor,
+	Peripheral,
+	Service as NobleService,
+} from 'noble';
+import {
+	AdvertisementPacket,
+	parseManufacturerData,
+} from 'beacon-utilities';
 
 import { AdapterEvent, BluetoothAdapter } from '../bluetoothAdapter';
-import { AdvertisementData, DeviceScanResult } from '../interfaces/scanResult';
+import { DeviceScanResult } from '../interfaces/scanResult';
 import { Address } from '../interfaces/device';
 import { Characteristic, CharacteristicProperties, Descriptor, Service, Services } from '../interfaces/bluetooth';
 import { shortenUUID } from '../utils';
@@ -12,6 +22,7 @@ function formatUUIDIfNecessary(uuid) {
 }
 
 export class NobleAdapter extends BluetoothAdapter {
+
 	private peripheralEntries: {[key: string]: Peripheral} = {};
 	private serviceEntries: {[key: string]: NobleService} = {};
 	private characteristicEntries: {[key: string]: NobleCharacteristic} = {};
@@ -30,13 +41,7 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	startScan(
-		scanTimeout: number,
-		scanMode: "active" | "passive",
-		scanType: 0 | 1,
-		scanInterval: number,
-		scanReporting: "instant" | "batch",
-		filter: { rssi?: number; name?: string },
-		resultCallback: (deviceScanResult: DeviceScanResult, timedout?: boolean) => void
+		resultCallback: (deviceScanResult: DeviceScanResult) => void
 	) {
 		const listener = (peripheral: Peripheral) => {
 			this.peripheralEntries[peripheral.address] = peripheral;
@@ -52,11 +57,11 @@ export class NobleAdapter extends BluetoothAdapter {
 		};
 		noble.on('discover', listener);
 		noble.startScanning();
-		setTimeout(() => {
-			noble.stopScanning();
-			noble.off('discover', listener);
-			resultCallback(null, true);
-		}, scanTimeout * 1000);
+	}
+
+	stopScan() {
+		noble.stopScanning();
+		noble.removeEventListener('discover');
 	}
 
 	async readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]> {
@@ -206,6 +211,19 @@ export class NobleAdapter extends BluetoothAdapter {
 					reject(error);
 				} else {
 					resolve();
+				}
+			});
+		});
+	}
+
+	async getRSSI(deviceId: string): Promise<number> {
+		const peripheral = await this.getDeviceById(deviceId);
+		return new Promise<number>((resolve, reject) => {
+			peripheral.updateRssi((error, rssi) => {
+				if(error) {
+					reject(error);
+				} else {
+					resolve(rssi);
 				}
 			});
 		});
@@ -395,14 +413,28 @@ export class NobleAdapter extends BluetoothAdapter {
 		return converted;
 	}
 
-	private convertAdvertisementData(advertisement: Advertisement): AdvertisementData {
-		const data = new AdvertisementData();
-		data.serviceUuids = advertisement.serviceUuids
-		data.localName = advertisement.localName;
-		data.txPower = advertisement.txPowerLevel;
-		data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
-		return data;
+	private convertAdvertisementData(advertisement: Advertisement): AdvertisementPacket {
+		return {
+			advertiseFlag: null,
+			serviceUuids: advertisement.serviceUuids,
+			localName: advertisement.localName,
+			txPower: advertisement.txPowerLevel,
+			manufacturerData: advertisement.manufacturerData && parseManufacturerData(Array.from(advertisement.manufacturerData)),
+			serviceData: this.getServiceData(advertisement.serviceData),
+		}
 	}
+
+	private getServiceData(serviceData: Array<{
+		uuid: string,
+		data: Buffer
+	}>): {[key: string]: number[]} {
+		const returned = {};
+		for(const entry of serviceData) {
+			const data = entry.data;
+			returned[entry.uuid] = data && Array.from(data);
+		}
+		return returned;
+}
 
 	private async getNobleCharacteristic(id: string, characteristic: Characteristic): Promise<NobleCharacteristic> {
 		const pathParts = characteristic.path.split('/');

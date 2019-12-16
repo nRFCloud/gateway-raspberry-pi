@@ -11,24 +11,17 @@ export enum AdapterEvent {
 export abstract class BluetoothAdapter extends EventEmitter {
 
 	/**
-	 *
-	 * @param scanTimeout When the scan should timeout, in seconds (default 3)
-	 * @param scanMode Scan mode: active or passive (default active)
-	 * @param scanType Type of scan: 0 for "regular", 1 for "beacons" (default 0)
-	 * @param scanInterval Ignored
-	 * @param scanReporting When results should be reported: "instant" or "batch" (default instant)
-	 * @param filter An object: {rssi, name}. If set, results should only be reported if they are higher then sent rssi and/or match name
+	 * Start scanning for devices
 	 * @param resultCallback Called when the scan finds a device
 	 */
 	abstract startScan(
-		scanTimeout: number,
-		scanMode: 'active' | 'passive',
-		scanType: 0 | 1,
-		scanInterval: number,
-		scanReporting: 'instant' | 'batch',
-		filter: {rssi?: number, name?: string},
-		resultCallback: (deviceScanResult: DeviceScanResult, timedout?: boolean) => void,
+		resultCallback: (deviceScanResult: DeviceScanResult) => void,
 	);
+
+	/**
+	 * Stop scanning for devices
+	 */
+	abstract stopScan();
 
 	/**
 	 * Connect to a BLE device. The adapter is responsible for reporting connection status by emitting the appropriate events
@@ -72,4 +65,6 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	abstract subscribe(deviceId: string, characteristic: Characteristic, callback: (characteristic: Characteristic) => void): Promise<void>;
 
 	abstract unsubscribe(deviceId: string, characteristic: Characteristic): Promise<void>;
+
+	abstract getRSSI(deviceId: string): Promise<number>;
 }

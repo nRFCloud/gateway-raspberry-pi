@@ -3,13 +3,8 @@ import { DeviceScanResult } from '../interfaces/scanResult';
 import { Characteristic, Descriptor, Service, Services } from '../interfaces/bluetooth';
 
 export class ExampleAdapter extends BluetoothAdapter {
+
 	startScan(
-		scanTimeout: number,
-		scanMode: "active" | "passive",
-		scanType: 0 | 1,
-		scanInterval: number,
-		scanReporting: "instant" | "batch",
-		filter: { rssi?: number; name?: string },
 		resultCallback: (deviceScanResult: DeviceScanResult) => void
 	) {
 		console.info('starting scan with params', arguments);
@@ -18,6 +13,9 @@ export class ExampleAdapter extends BluetoothAdapter {
 		// 	const device = this.convertScanResult(result);
 		// 	resultCallback(device);
 		// }});
+	}
+
+	stopScan() {
 	}
 
 	private convertScanResult(rawScanResult): DeviceScanResult {
@@ -62,6 +60,10 @@ export class ExampleAdapter extends BluetoothAdapter {
 	}
 
 	unsubscribe(deviceId: string, characteristic: Characteristic): Promise<void> {
+		return undefined;
+	}
+
+	getRSSI(deviceId: string): Promise<number> {
 		return undefined;
 	}
 }

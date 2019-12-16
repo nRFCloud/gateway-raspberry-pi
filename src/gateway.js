@@ -73,6 +73,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var awsIot = __importStar(require("aws-iot-device-sdk"));
 var events_1 = require("events");
 var isEqual_1 = __importDefault(require("lodash/isEqual"));
+var beacon_utilities_1 = require("beacon-utilities");
 var bluetoothAdapter_1 = require("./bluetoothAdapter");
 var mqttFacade_1 = require("./mqttFacade");
 var bluetooth_1 = require("./interfaces/bluetooth");
@@ -91,14 +92,20 @@ var Gateway = (function (_super) {
         var _this = _super.call(this) || this;
         _this.deviceConnections = {};
         _this.deviceConnectionIntervalHolder = null;
-        _this.isTryingConnection = false;
         _this.lastTriedAddress = null;
         _this.discoveryCache = {};
+        _this.watchList = [];
         console.info('got config object', config);
         _this.gatewayId = config.gatewayId;
         _this.stage = config.stage;
         _this.tenantId = config.tenantId;
         _this.bluetoothAdapter = config.bluetoothAdapter;
+        _this.watchInterval = config.watchInterval || 60;
+        _this.watchDuration = config.watchDuration || 2;
+        _this.state = {
+            isTryingConnection: false,
+            scanning: false,
+        };
         _this.bluetoothAdapter.on(bluetoothAdapter_1.AdapterEvent.DeviceConnected, function (deviceId) {
             _this.deviceConnections[deviceId] = true;
             _this.reportConnectionUp(deviceId);
@@ -133,6 +140,17 @@ var Gateway = (function (_super) {
         _this.gatewayDevice.subscribe(_this.shadowGetTopic + "/accepted");
         _this.gatewayDevice.subscribe(_this.shadowUpdateTopic);
         _this.mqttFacade = new mqttFacade_1.MqttFacade(_this.gatewayDevice, _this.g2cTopic, _this.gatewayId);
+        _this.watcherHolder = setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.performWatches()];
+                    case 1:
+                        _a.sent();
+                        this.performRSSIs();
+                        return [2];
+                }
+            });
+        }); }, _this.watchInterval * 1000);
         return _this;
     }
     Object.defineProperty(Gateway.prototype, "c2gTopic", {
@@ -253,7 +271,67 @@ var Gateway = (function (_super) {
             this.emit(GatewayEvent.NameChanged, newState.name);
         }
         if (newState.beacons) {
+            this.handleBeaconState(newState.beacons);
         }
+    };
+    Gateway.prototype.handleBeaconState = function (beacons) {
+        this.watchList = beacons;
+    };
+    Gateway.prototype.performRSSIs = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _i, _a, deviceId, rssi;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _i = 0, _a = Object.keys(this.deviceConnections);
+                        _b.label = 1;
+                    case 1:
+                        if (!(_i < _a.length)) return [3, 4];
+                        deviceId = _a[_i];
+                        return [4, this.bluetoothAdapter.getRSSI(deviceId)];
+                    case 2:
+                        rssi = _b.sent();
+                        this.mqttFacade.handleScanResult({
+                            rssi: rssi,
+                            address: {
+                                address: deviceId,
+                                type: '',
+                            },
+                        }, false);
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3, 1];
+                    case 4: return [2];
+                }
+            });
+        });
+    };
+    Gateway.prototype.performWatches = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                if (!this.watchList || this.watchList.length < 1) {
+                    return [2];
+                }
+                if (this.state.scanning) {
+                    return [2];
+                }
+                this.state.scanning = true;
+                return [2, new Promise(function (resolve) {
+                        _this.bluetoothAdapter.startScan(function (result) {
+                            if (_this.watchList.includes(result.address.address)) {
+                                _this.mqttFacade.handleScanResult(result, false);
+                            }
+                        });
+                        setTimeout(function () {
+                            _this.bluetoothAdapter.stopScan();
+                            _this.state.scanning = false;
+                            resolve();
+                        }, _this.watchDuration * 1000);
+                    })];
+            });
+        });
     };
     Gateway.prototype.handleError = function (error) {
         console.error('Error from MQTT', error);
@@ -389,12 +467,36 @@ var Gateway = (function (_super) {
             });
         });
     };
+    Gateway.prototype.shouldIncludeResult = function (op, result) {
+        if (op.scanType === c2g_1.ScanType.Beacon && !beacon_utilities_1.isBeacon(result.advertisementData)) {
+            return false;
+        }
+        if (op.filter) {
+            if (op.filter.name && result.name.indexOf(op.filter.name) < 0) {
+                return false;
+            }
+            if (op.filter.rssi && result.rssi < op.filter.rssi) {
+                return false;
+            }
+        }
+        return true;
+    };
     Gateway.prototype.startScan = function (op) {
         var _this = this;
-        this.bluetoothAdapter.startScan(op.scanTimeout, op.scanMode, op.scanType, op.scanInterval, op.scanReporting, op.filter, function (result, timedout) {
-            if (timedout === void 0) { timedout = false; }
-            return _this.mqttFacade.handleScanResult(result, timedout);
+        if (this.state.scanning) {
+            return;
+        }
+        this.state.scanning = true;
+        this.bluetoothAdapter.startScan(function (result) {
+            if (_this.shouldIncludeResult(op, result)) {
+                _this.mqttFacade.handleScanResult(result, false);
+            }
         });
+        setTimeout(function () {
+            _this.bluetoothAdapter.stopScan();
+            _this.mqttFacade.handleScanResult(null, true);
+            _this.state.scanning = false;
+        }, op.scanTimeout * 1000);
     };
     Gateway.prototype.updateDeviceConnections = function (connections) {
         return __awaiter(this, void 0, void 0, function () {
@@ -478,7 +580,7 @@ var Gateway = (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (this.isTryingConnection) {
+                        if (this.state.isTryingConnection) {
                             return [2];
                         }
                         connections = Object.keys(this.deviceConnections).filter(function (deviceId) { return !_this.deviceConnections[deviceId]; });
@@ -500,7 +602,7 @@ var Gateway = (function (_super) {
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, 4, 5]);
-                        this.isTryingConnection = true;
+                        this.state.isTryingConnection = true;
                         return [4, this.bluetoothAdapter.connect(nextAddressToTry)];
                     case 2:
                         _a.sent();
@@ -510,7 +612,7 @@ var Gateway = (function (_super) {
                         return [3, 5];
                     case 4:
                         this.lastTriedAddress = nextAddressToTry;
-                        this.isTryingConnection = false;
+                        this.state.isTryingConnection = false;
                         return [7];
                     case 5: return [2];
                 }

@@ -64,6 +64,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var noble_1 = __importDefault(require("@abandonware/noble"));
+var beacon_utilities_1 = require("beacon-utilities");
 var bluetoothAdapter_1 = require("../bluetoothAdapter");
 var scanResult_1 = require("../interfaces/scanResult");
 var bluetooth_1 = require("../interfaces/bluetooth");
@@ -87,7 +88,7 @@ var NobleAdapter = (function (_super) {
         });
         return _this;
     }
-    NobleAdapter.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, resultCallback) {
+    NobleAdapter.prototype.startScan = function (resultCallback) {
         var _this = this;
         var listener = function (peripheral) {
             _this.peripheralEntries[peripheral.address] = peripheral;
@@ -103,11 +104,10 @@ var NobleAdapter = (function (_super) {
         };
         noble_1.default.on('discover', listener);
         noble_1.default.startScanning();
-        setTimeout(function () {
-            noble_1.default.stopScanning();
-            noble_1.default.off('discover', listener);
-            resultCallback(null, true);
-        }, scanTimeout * 1000);
+    };
+    NobleAdapter.prototype.stopScan = function () {
+        noble_1.default.stopScanning();
+        noble_1.default.removeEventListener('discover');
     };
     NobleAdapter.prototype.readCharacteristicValue = function (id, characteristic) {
         return __awaiter(this, void 0, void 0, function () {
@@ -386,6 +386,28 @@ var NobleAdapter = (function (_super) {
             });
         });
     };
+    NobleAdapter.prototype.getRSSI = function (deviceId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var peripheral;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4, this.getDeviceById(deviceId)];
+                    case 1:
+                        peripheral = _a.sent();
+                        return [2, new Promise(function (resolve, reject) {
+                                peripheral.updateRssi(function (error, rssi) {
+                                    if (error) {
+                                        reject(error);
+                                    }
+                                    else {
+                                        resolve(rssi);
+                                    }
+                                });
+                            })];
+                }
+            });
+        });
+    };
     NobleAdapter.prototype.getDeviceById = function (deviceId) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b;
@@ -635,12 +657,23 @@ var NobleAdapter = (function (_super) {
         return converted;
     };
     NobleAdapter.prototype.convertAdvertisementData = function (advertisement) {
-        var data = new scanResult_1.AdvertisementData();
-        data.serviceUuids = advertisement.serviceUuids;
-        data.localName = advertisement.localName;
-        data.txPower = advertisement.txPowerLevel;
-        data.manufacturerData = advertisement.manufacturerData && Array.from(advertisement.manufacturerData);
-        return data;
+        return {
+            advertiseFlag: null,
+            serviceUuids: advertisement.serviceUuids,
+            localName: advertisement.localName,
+            txPower: advertisement.txPowerLevel,
+            manufacturerData: advertisement.manufacturerData && beacon_utilities_1.parseManufacturerData(Array.from(advertisement.manufacturerData)),
+            serviceData: this.getServiceData(advertisement.serviceData),
+        };
+    };
+    NobleAdapter.prototype.getServiceData = function (serviceData) {
+        var returned = {};
+        for (var _i = 0, serviceData_1 = serviceData; _i < serviceData_1.length; _i++) {
+            var entry = serviceData_1[_i];
+            var data = entry.data;
+            returned[entry.uuid] = data && Array.from(data);
+        }
+        return returned;
     };
     NobleAdapter.prototype.getNobleCharacteristic = function (id, characteristic) {
         return __awaiter(this, void 0, void 0, function () {

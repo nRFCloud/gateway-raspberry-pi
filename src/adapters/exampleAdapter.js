@@ -20,8 +20,10 @@ var ExampleAdapter = (function (_super) {
     function ExampleAdapter() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    ExampleAdapter.prototype.startScan = function (scanTimeout, scanMode, scanType, scanInterval, scanReporting, filter, resultCallback) {
+    ExampleAdapter.prototype.startScan = function (resultCallback) {
         console.info('starting scan with params', arguments);
+    };
+    ExampleAdapter.prototype.stopScan = function () {
     };
     ExampleAdapter.prototype.convertScanResult = function (rawScanResult) {
         var device = new scanResult_1.DeviceScanResult();
@@ -56,6 +58,9 @@ var ExampleAdapter = (function (_super) {
         return undefined;
     };
     ExampleAdapter.prototype.unsubscribe = function (deviceId, characteristic) {
+        return undefined;
+    };
+    ExampleAdapter.prototype.getRSSI = function (deviceId) {
         return undefined;
     };
     return ExampleAdapter;

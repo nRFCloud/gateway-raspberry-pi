@@ -1,6 +1,7 @@
 import * as awsIot from 'aws-iot-device-sdk';
 import { EventEmitter } from 'events';
 import isEqual from 'lodash/isEqual';
+import { isBeacon } from 'beacon-utilities';
 
 import { AdapterEvent, BluetoothAdapter } from './bluetoothAdapter';
 import { MqttFacade } from './mqttFacade';
@@ -9,12 +10,15 @@ import {
 	C2GEventType,
 	CharacteristicOperation,
 	CharacteristicWriteOperation,
-	DescriptorOperation, DescriptorWriteOperation,
+	DescriptorOperation,
+	DescriptorWriteOperation,
 	DeviceOperation,
 	Message,
 	ScanOperation,
+	ScanType,
 } from './interfaces/c2g';
 import { assumeType } from './utils';
+import { DeviceScanResult } from './interfaces/scanResult';
 
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
@@ -37,6 +41,13 @@ export type GatewayConfiguration = {
 	secretKey?: string;
 	sessionToken?: string;
 	debug?: boolean;
+	watchInterval?: number; //defaults to 60 seconds
+	watchDuration?: number; //defaults to 2 seconds
+}
+
+interface GatewayState {
+	scanning: boolean;
+	isTryingConnection: boolean;
 }
 
 export class Gateway extends EventEmitter {
@@ -46,13 +57,19 @@ export class Gateway extends EventEmitter {
 	readonly gatewayDevice: awsIot.device;
 	readonly bluetoothAdapter: BluetoothAdapter;
 	readonly mqttFacade: MqttFacade;
+	readonly watchInterval: number;
+	readonly watchDuration: number;
 
-	private deviceConnections = {};
+	private deviceConnections: {[deviceId: string]: boolean} = {};
 	private deviceConnectionIntervalHolder = null;
-	private isTryingConnection: boolean = false;
 	private lastTriedAddress: string = null;
 
 	private discoveryCache: {[key: string]: Services} = {};
+
+	private watchList: string[] = [];
+	private watcherHolder;
+
+	private state: GatewayState;
 
 	get c2gTopic(): string {
 		return `${this.stage}/${this.tenantId}/gateways/${this.gatewayId}/c2g`;
@@ -81,6 +98,12 @@ export class Gateway extends EventEmitter {
 		this.stage = config.stage;
 		this.tenantId = config.tenantId;
 		this.bluetoothAdapter = config.bluetoothAdapter;
+		this.watchInterval = config.watchInterval || 60;
+		this.watchDuration = config.watchDuration || 2;
+		this.state = {
+			isTryingConnection: false,
+			scanning: false,
+		};
 
 		this.bluetoothAdapter.on(AdapterEvent.DeviceConnected, (deviceId) => {
 			this.deviceConnections[deviceId] = true;
@@ -123,6 +146,11 @@ export class Gateway extends EventEmitter {
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
 
 		this.mqttFacade = new MqttFacade(this.gatewayDevice, this.g2cTopic, this.gatewayId);
+
+		this.watcherHolder = setInterval(async () => {
+			await this.performWatches();
+			this.performRSSIs();
+		}, this.watchInterval * 1000);
 	}
 
 	private handleMessage(topic: string, payload) {
@@ -222,7 +250,50 @@ export class Gateway extends EventEmitter {
 		}
 
 		if (newState.beacons) {
+			this.handleBeaconState(newState.beacons);
 		}
+	}
+
+	private handleBeaconState(beacons: string[]) {
+		this.watchList = beacons;
+	}
+
+	private async performRSSIs() {
+		for (const deviceId of Object.keys(this.deviceConnections)) {
+			const rssi = await this.bluetoothAdapter.getRSSI(deviceId);
+			this.mqttFacade.handleScanResult({
+				rssi,
+				address: {
+					address: deviceId,
+					type: '',
+				},
+			} as unknown as DeviceScanResult, false);
+		}
+	}
+
+	private async performWatches(): Promise<void> {
+		if (!this.watchList || this.watchList.length < 1) {
+			return;
+		}
+
+		//Skip if we're already scanning
+		if (this.state.scanning) {
+			return;
+		}
+
+		this.state.scanning = true;
+		return new Promise<void>((resolve) => {
+			this.bluetoothAdapter.startScan((result) => {
+				if (this.watchList.includes(result.address.address)) {
+					this.mqttFacade.handleScanResult(result, false);
+				}
+			});
+			setTimeout(() => {
+				this.bluetoothAdapter.stopScan();
+				this.state.scanning = false;
+				resolve();
+			}, this.watchDuration * 1000);
+		});
 	}
 
 	private handleError(error) {
@@ -294,18 +365,43 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	private shouldIncludeResult(op: ScanOperation, result: DeviceScanResult): boolean {
+		if (op.scanType === ScanType.Beacon && !isBeacon(result.advertisementData)) {
+			return false;
+		}
+
+		if (op.filter) {
+			if (op.filter.name && result.name.indexOf(op.filter.name) < 0) {
+				return false;
+			}
+
+			if (op.filter.rssi && result.rssi < op.filter.rssi) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	private startScan(
 		op: ScanOperation
 	) {
+		if (this.state.scanning) {
+			return;
+		}
+		this.state.scanning = true;
 		this.bluetoothAdapter.startScan(
-			op.scanTimeout,
-			op.scanMode,
-			op.scanType,
-			op.scanInterval,
-			op.scanReporting,
-			op.filter,
-			(result, timedout = false) => this.mqttFacade.handleScanResult(result, timedout)
+			(result) => {
+				if (this.shouldIncludeResult(op, result)) {
+					this.mqttFacade.handleScanResult(result, false);
+				}
+			}
 		);
+		setTimeout(() => {
+			this.bluetoothAdapter.stopScan();
+			this.mqttFacade.handleScanResult(null, true);
+			this.state.scanning = false;
+		}, op.scanTimeout * 1000);
 	}
 
 	private async updateDeviceConnections(connections: string[]) {
@@ -369,7 +465,7 @@ export class Gateway extends EventEmitter {
 
 	//Try to initiate the next connection on the list
 	private async initiateNextConnection() {
-		if (this.isTryingConnection) {
+		if (this.state.isTryingConnection) {
 			return;
 		}
 
@@ -391,12 +487,12 @@ export class Gateway extends EventEmitter {
 		}
 
 		try {
-			this.isTryingConnection = true;
+			this.state.isTryingConnection = true;
 			await this.bluetoothAdapter.connect(nextAddressToTry);
 		} catch (error) {
 		} finally {
 			this.lastTriedAddress = nextAddressToTry;
-			this.isTryingConnection = false;
+			this.state.isTryingConnection = false;
 		}
 	}
 
