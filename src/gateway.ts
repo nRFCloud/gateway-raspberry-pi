@@ -20,6 +20,8 @@ import {
 import { assumeType } from './utils';
 import { DeviceScanResult } from './interfaces/scanResult';
 
+const CLIENT_CHARACTERISTIC_CONFIGURATION = '2902';
+
 export enum GatewayEvent {
 	NameChanged = 'NAME_CHANGED',
 	Deleted = 'GATEWAY_DELTED',
@@ -27,22 +29,27 @@ export enum GatewayEvent {
 	ConnectionsChanged = 'CONNECTIONS_CHANGED',
 }
 
+/*
+	To use the gateway in MQTTs (non-websocket) mode, keyPath, certPath and caPath *must* be defined
+	To use the gateway in WSS mode, accessKeyId, secretKey, and sessionToken *must* be defined
+*/
+
 export type GatewayConfiguration = {
-	keyPath?: string;
-	certPath?: string;
-	caPath?: string;
-	gatewayId?: string;
-	host?: string;
-	stage?: string;
-	tenantId?: string;
+	keyPath?: string; //Path to the gateway's private key
+	certPath?: string; //Path to the gateway's certificate file
+	caPath?: string; //Path to the CA certifiate file
+	gatewayId: string; //The device ID
+	host: string; //The AWS IoT host name
+	stage?: string; //What stage this device is on, defaults to "prod"
+	tenantId: string; //The tenant ID for the associated tenant
 	bluetoothAdapter: BluetoothAdapter;
-	protocol?: 'mqtts' | 'wss';
-	accessKeyId?: string;
-	secretKey?: string;
-	sessionToken?: string;
-	debug?: boolean;
-	watchInterval?: number; //defaults to 60 seconds
-	watchDuration?: number; //defaults to 2 seconds
+	protocol?: 'mqtts' | 'wss'; //If not set, the gateway will try to guess based on what values are set
+	accessKeyId?: string; //From a valid Cognito session
+	secretKey?: string; //From a valid Cognito session
+	sessionToken?: string; //From a valid Cognito session
+	debug?: boolean; //Passed through to the AWS IoT device object
+	watchInterval?: number; //How often to perform watches (beacons and RSSIs), defaults to 60 seconds
+	watchDuration?: number; //How long to look for beacons, defaults to 2 seconds
 }
 
 interface GatewayState {
@@ -93,9 +100,9 @@ export class Gateway extends EventEmitter {
 
 	constructor(config: GatewayConfiguration) {
 		super();
-		console.info('got config object', config);
+
 		this.gatewayId = config.gatewayId;
-		this.stage = config.stage;
+		this.stage = config.stage || 'prod';
 		this.tenantId = config.tenantId;
 		this.bluetoothAdapter = config.bluetoothAdapter;
 		this.watchInterval = config.watchInterval || 60;
@@ -117,6 +124,7 @@ export class Gateway extends EventEmitter {
 			}
 		});
 
+		//A Gateway is just an AWS IoT device, here's where it's started and connected
 		this.gatewayDevice = new awsIot.device({
 			keyPath: config.keyPath,
 			certPath: config.certPath,
@@ -132,6 +140,7 @@ export class Gateway extends EventEmitter {
 
 		this.gatewayDevice.on('connect', () => {
 			console.log('connect');
+			//To finish the connection, an empty string must be published to the shadowGet topic
 			this.gatewayDevice.publish(this.shadowGetTopic, '');
 		});
 
@@ -141,6 +150,12 @@ export class Gateway extends EventEmitter {
 
 		this.gatewayDevice.on('error', this.handleError);
 
+		/*
+		The gateway needs to listen to three topics:
+		c2g: this is the primary way that the cloud talks to the gateway (cloud2gateway). Operations are sent over this topic like "start scanning"
+		shadowGet/accepted:
+		shadowUpdate: Both of these deal with the device's shadow. This is how bluetooth devices are "added" to a gateway as well as beacons. They're for different things, but can be handled the same
+		 */
 		this.gatewayDevice.subscribe(this.c2gTopic);
 		this.gatewayDevice.subscribe(`${this.shadowGetTopic}/accepted`);
 		this.gatewayDevice.subscribe(this.shadowUpdateTopic);
@@ -164,7 +179,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
-
+	//The cloud is telling us to perform a task (operation)
 	private handleC2GMessage(message: Message) {
 		console.log('got g2c message', message);
 		if (!message || !message.type || !message.id || message.type !== 'operation' || !message.operation || !message.operation.type) {
@@ -223,6 +238,7 @@ export class Gateway extends EventEmitter {
 				}
 				break;
 			case C2GEventType.GatewayStatus: //Get information about the gateway
+				//This is probably not used for anything
 				break;
 			case C2GEventType.DeleteYourself: //User has deleted this gateway from their account
 				console.log('Gateway has been deleted');
@@ -231,6 +247,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//The gateway's shadow has changed, we need to react to the change
 	private handleShadowMessage(message) {
 		if (!message.state) {
 			return;
@@ -241,36 +258,53 @@ export class Gateway extends EventEmitter {
 			return;
 		}
 
+		//state.desiredConnections is the list of bluetooth connections we should be worried about
 		if (newState.desiredConnections) {
 			this.updateDeviceConnections(newState.desiredConnections.map((conn) => conn.id));
 		}
 
+		//state.name is the name of the gateway
 		if (newState.name) {
 			this.emit(GatewayEvent.NameChanged, newState.name);
 		}
 
+		//state.beacons is a list of beacons we should watch
 		if (newState.beacons) {
 			this.handleBeaconState(newState.beacons);
 		}
 	}
 
+	//Beacons are just a flat list of ids
 	private handleBeaconState(beacons: string[]) {
 		this.watchList = beacons;
 	}
 
+	//On a timer, we should report the RSSIs of the devices
+	//The way to report about the devices is to send a "scan result" message with the updated information
 	private async performRSSIs() {
 		for (const deviceId of Object.keys(this.deviceConnections)) {
-			const rssi = await this.bluetoothAdapter.getRSSI(deviceId);
-			this.mqttFacade.handleScanResult({
-				rssi,
-				address: {
-					address: deviceId,
-					type: '',
-				},
-			} as unknown as DeviceScanResult, false);
+			if (!this.deviceConnections[deviceId]) {
+				//Device isn't connected, don't bother trying to get the rssi
+				continue;
+			}
+
+			try {
+				const rssi = await this.bluetoothAdapter.getRSSI(deviceId);
+				this.mqttFacade.handleScanResult({
+					rssi,
+					address: {
+						address: deviceId,
+						type: '',
+					},
+				} as unknown as DeviceScanResult, false);
+			} catch (err) {
+				//squelch. If there was an error, we don't care since this is not a critical piece of information
+			}
 		}
 	}
 
+	//On a timer, we should report about any beacons
+	//Like RSSIs, we just send the information as a "scan result"
 	private async performWatches(): Promise<void> {
 		if (!this.watchList || this.watchList.length < 1) {
 			return;
@@ -282,6 +316,7 @@ export class Gateway extends EventEmitter {
 		}
 
 		this.state.scanning = true;
+		//The way to track beacons is to just scan for them
 		return new Promise<void>((resolve) => {
 			this.bluetoothAdapter.startScan((result) => {
 				if (this.watchList.includes(result.address.address)) {
@@ -300,6 +335,7 @@ export class Gateway extends EventEmitter {
 		console.error('Error from MQTT', error);
 	}
 
+	//Do a "discover" operation on a device, this will do a standard bluetooth discover AS WELL AS grabs the current value for each characteristic and descriptor
 	private async doDiscover(deviceAddress: string) {
 		if (typeof this.discoveryCache[deviceAddress] === 'undefined') {
 			this.discoveryCache[deviceAddress] = await this.bluetoothAdapter.discover(deviceAddress);
@@ -308,6 +344,7 @@ export class Gateway extends EventEmitter {
 		this.mqttFacade.reportDiscover(deviceAddress, this.discoveryCache[deviceAddress]);
 	}
 
+	//Do a characteristic read operation
 	private async doCharacteristicRead(op: CharacteristicOperation) {
 		try {
 			const char = new Characteristic(op.characteristicUUID, op.serviceUUID);
@@ -318,6 +355,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//Do a characteristic write operation, note that we don't care about write without response
 	private async doCharacteristicWrite(op: CharacteristicWriteOperation) {
 		try {
 			const char = new Characteristic(op.characteristicUUID, op.serviceUUID);
@@ -330,6 +368,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//Do a descriptor read operation
 	private async doDescriptorRead(op: DescriptorOperation) {
 		try {
 			const descriptor = new Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
@@ -340,13 +379,14 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//Do a descriptor write operation
 	//intercept "subscribe" events (writing to 2902) and instead setup/tear down a subscription
 	private async doDescriptorWrite(op: DescriptorWriteOperation) {
 
 		try {
 			const descriptor = new Descriptor(op.descriptorUUID, op.characteristicUUID, op.serviceUUID);
 			descriptor.value = op.descriptorValue;
-			if (descriptor.uuid === '2902') {
+			if (descriptor.uuid === CLIENT_CHARACTERISTIC_CONFIGURATION) {
 				const characteristic = new Characteristic(op.characteristicUUID, op.serviceUUID);
 				if (descriptor.value.length > 0 && descriptor.value[0]) {
 					await this.bluetoothAdapter.subscribe(op.deviceAddress, characteristic, (characteristic: Characteristic) => {
@@ -365,6 +405,7 @@ export class Gateway extends EventEmitter {
 		}
 	}
 
+	//Filter out results that don't match the sent operation
 	private shouldIncludeResult(op: ScanOperation, result: DeviceScanResult): boolean {
 		if (op.scanType === ScanType.Beacon && !isBeacon(result.advertisementData)) {
 			return false;
@@ -383,6 +424,7 @@ export class Gateway extends EventEmitter {
 		return true;
 	}
 
+	//Do a scanning operation
 	private startScan(
 		op: ScanOperation
 	) {
@@ -404,6 +446,7 @@ export class Gateway extends EventEmitter {
 		}, op.scanTimeout * 1000);
 	}
 
+	//Given the desired connections from the shadow, update our list of connections
 	private async updateDeviceConnections(connections: string[]) {
 		const existingConnections = {...this.deviceConnections};
 		const deviceIds = Object.keys(existingConnections);
@@ -434,16 +477,19 @@ export class Gateway extends EventEmitter {
 		this.startDeviceConnections();
 
 		if (!isEqual(this.deviceConnections, existingConnections)) {
+			//If there was a difference, report the current connections
 			this.reportConnections();
 		}
 	}
 
+	//Report the current connections
 	private reportConnections() {
 		const statusConnections = this.getStatusConnections();
 		this.mqttFacade.reportConnections(statusConnections);
 		this.emit(GatewayEvent.ConnectionsChanged, statusConnections);
 	}
 
+	//Convert our list of connections to what the cloud is expecting
 	private getStatusConnections() {
 		const statusConnections = {};
 		for (const connection of Object.keys(this.deviceConnections)) {
@@ -457,6 +503,7 @@ export class Gateway extends EventEmitter {
 		return statusConnections;
 	}
 
+	//On an interval, try to initiate connections. This is started only when we have connections to initiate
 	private startDeviceConnections() {
 		if (this.deviceConnectionIntervalHolder === null) {
 			this.deviceConnectionIntervalHolder = setInterval(() => this.initiateNextConnection(), 1000);
@@ -464,6 +511,7 @@ export class Gateway extends EventEmitter {
 	}
 
 	//Try to initiate the next connection on the list
+	//Will go through the list one at a time to connect (so it won't be stuck trying to connect to only the first one in the list)
 	private async initiateNextConnection() {
 		if (this.state.isTryingConnection) {
 			return;
@@ -501,6 +549,7 @@ export class Gateway extends EventEmitter {
 		this.deviceConnectionIntervalHolder = null;
 	}
 
+	//Whenever a device is connected or dissconnected, we need to report it with two messages
 	private reportConnectionUp(deviceId: string) {
 		this.reportConnections();
 		this.mqttFacade.reportConnectionUp(deviceId);

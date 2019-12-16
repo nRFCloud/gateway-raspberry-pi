@@ -11,7 +11,7 @@ export enum AdapterEvent {
 export abstract class BluetoothAdapter extends EventEmitter {
 
 	/**
-	 * Start scanning for devices
+	 * Start scanning for devices. Scan results need to be converted to match DeviceScanResult
 	 * @param resultCallback Called when the scan finds a device
 	 */
 	abstract startScan(
@@ -58,13 +58,38 @@ export abstract class BluetoothAdapter extends EventEmitter {
 	 */
 	abstract readDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<number[]>;
 
+	/**
+	 * Write a characteristic value to a device
+	 * @param deviceId Device ID to write to
+	 * @param characteristic Characteristic to write
+	 */
 	abstract writeCharacteristicValue(deviceId: string, characteristic: Characteristic): Promise<void>;
 
+	/**
+	 * Write a descriptor value to a device, but only if not setting notifications/indications
+	 * @param deviceId Device ID to write to
+	 * @param descriptor Descriptor to write
+	 */
 	abstract writeDescriptorValue(deviceId: string, descriptor: Descriptor): Promise<void>;
 
+	/**
+	 * Turn on notifications/indications for a characteristic
+	 * @param deviceId Device ID for the Characteristic
+	 * @param characteristic Characteristic to subscribe to
+	 * @param callback A function to call when the characteristic changes
+	 */
 	abstract subscribe(deviceId: string, characteristic: Characteristic, callback: (characteristic: Characteristic) => void): Promise<void>;
 
+	/**
+	 * Turn off notifications/indications for a characteristic
+	 * @param deviceId Device ID for the Characteristic
+	 * @param characteristic Characteristic to unsubscribe from
+	 */
 	abstract unsubscribe(deviceId: string, characteristic: Characteristic): Promise<void>;
 
+	/**
+	 * Read the RSSI of a device
+	 * @param deviceId Device ID to read
+	 */
 	abstract getRSSI(deviceId: string): Promise<number>;
 }

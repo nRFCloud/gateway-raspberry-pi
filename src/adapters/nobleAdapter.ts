@@ -61,7 +61,7 @@ export class NobleAdapter extends BluetoothAdapter {
 
 	stopScan() {
 		noble.stopScanning();
-		noble.removeEventListener('discover');
+		noble.removeAllListeners('discover');
 	}
 
 	async readCharacteristicValue(id: string, characteristic: Characteristic): Promise<number[]> {
