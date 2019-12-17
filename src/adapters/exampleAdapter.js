@@ -13,8 +13,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var bluetoothAdapter_1 = require("../bluetoothAdapter");
-var scanResult_1 = require("../interfaces/scanResult");
+var gateway_common_1 = require("gateway-common");
+var gateway_common_2 = require("gateway-common");
 var ExampleAdapter = (function (_super) {
     __extends(ExampleAdapter, _super);
     function ExampleAdapter() {
@@ -26,7 +26,7 @@ var ExampleAdapter = (function (_super) {
     ExampleAdapter.prototype.stopScan = function () {
     };
     ExampleAdapter.prototype.convertScanResult = function (rawScanResult) {
-        var device = new scanResult_1.DeviceScanResult();
+        var device = new gateway_common_2.DeviceScanResult();
         device.address = rawScanResult.address;
         device.rssi = rawScanResult.rssi;
         device.name = rawScanResult.name;
@@ -64,5 +64,5 @@ var ExampleAdapter = (function (_super) {
         return undefined;
     };
     return ExampleAdapter;
-}(bluetoothAdapter_1.BluetoothAdapter));
+}(gateway_common_1.BluetoothAdapter));
 exports.ExampleAdapter = ExampleAdapter;

@@ -65,10 +65,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var noble_1 = __importDefault(require("@abandonware/noble"));
 var beacon_utilities_1 = require("beacon-utilities");
-var bluetoothAdapter_1 = require("../bluetoothAdapter");
-var scanResult_1 = require("../interfaces/scanResult");
-var bluetooth_1 = require("../interfaces/bluetooth");
-var utils_1 = require("../utils");
+var gateway_common_1 = require("gateway-common");
 function formatUUIDIfNecessary(uuid) {
     return uuid.toLowerCase();
 }
@@ -92,7 +89,7 @@ var NobleAdapter = (function (_super) {
         var _this = this;
         var listener = function (peripheral) {
             _this.peripheralEntries[peripheral.address] = peripheral;
-            var device = new scanResult_1.DeviceScanResult();
+            var device = new gateway_common_1.DeviceScanResult();
             device.address = {
                 address: peripheral.address.toUpperCase(),
                 type: peripheral.addressType,
@@ -107,7 +104,7 @@ var NobleAdapter = (function (_super) {
     };
     NobleAdapter.prototype.stopScan = function () {
         noble_1.default.stopScanning();
-        noble_1.default.removeEventListener('discover');
+        noble_1.default.removeAllListeners('discover');
     };
     NobleAdapter.prototype.readCharacteristicValue = function (id, characteristic) {
         return __awaiter(this, void 0, void 0, function () {
@@ -225,10 +222,10 @@ var NobleAdapter = (function (_super) {
                             return [2];
                         }
                         peripheral.once('disconnect', function () {
-                            _this.emit(bluetoothAdapter_1.AdapterEvent.DeviceDisconnected, id);
+                            _this.emit(gateway_common_1.AdapterEvent.DeviceDisconnected, id);
                         });
                         peripheral.once('connect', function () {
-                            _this.emit(bluetoothAdapter_1.AdapterEvent.DeviceConnected, id);
+                            _this.emit(gateway_common_1.AdapterEvent.DeviceConnected, id);
                         });
                         return [2, new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
                                 return __generator(this, function (_a) {
@@ -626,12 +623,12 @@ var NobleAdapter = (function (_super) {
         });
     };
     NobleAdapter.prototype.convertService = function (service) {
-        var uuid = utils_1.shortenUUID(service.uuid);
-        return new bluetooth_1.Service(uuid);
+        var uuid = gateway_common_1.shortenUUID(service.uuid);
+        return new gateway_common_1.Service(uuid);
     };
     NobleAdapter.prototype.convertCharacteristic = function (service, characteristic) {
-        var uuid = utils_1.shortenUUID(characteristic.uuid);
-        var converted = new bluetooth_1.Characteristic(uuid);
+        var uuid = gateway_common_1.shortenUUID(characteristic.uuid);
+        var converted = new gateway_common_1.Characteristic(uuid);
         converted.path = service.uuid + "/" + uuid;
         converted.properties = this.convertCharacteristicProperties(characteristic);
         converted.value = [];
@@ -650,8 +647,8 @@ var NobleAdapter = (function (_super) {
         };
     };
     NobleAdapter.prototype.convertDescriptor = function (convertedCharacteristic, descriptor) {
-        var uuid = utils_1.shortenUUID(descriptor.uuid);
-        var converted = new bluetooth_1.Descriptor(uuid);
+        var uuid = gateway_common_1.shortenUUID(descriptor.uuid);
+        var converted = new gateway_common_1.Descriptor(uuid);
         converted.path = convertedCharacteristic.path + "/" + uuid;
         converted.value = [];
         return converted;
@@ -693,5 +690,5 @@ var NobleAdapter = (function (_super) {
         return this.getDescriptorByUUID(id, pathParts[0], pathParts[1], pathParts[2]);
     };
     return NobleAdapter;
-}(bluetoothAdapter_1.BluetoothAdapter));
+}(gateway_common_1.BluetoothAdapter));
 exports.NobleAdapter = NobleAdapter;

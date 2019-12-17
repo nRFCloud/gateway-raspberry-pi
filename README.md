@@ -1,12 +1,11 @@
 # gateway-raspberry-pi
-A BLE gateway implementation that can run on Raspberry PI (headless)
+A BLE gateway implementation for nRF Cloud that can run on Raspberry PI (headless)
 
 To use:
-1. Create a gateway using the IRIS Rest API `tenantsTenantIdGatewaysPost`
-1. Save the returned information
-1. Copy .env.sample
-1. Fill in the appropriate details
+1. Create a gateway using `npx @nrfcloud/gateway-registration`, make sure you have an account on nRF Cloud and use the same credentials
+1. The result of the command will be in `./result`
+1. Copy the files to the root of this project (same directory as this README)
 1. Build code: `npm run build`
-1. Run gateway: `npm run start`
-    1. If you want to use the "Noble" adapter, run: `npm run start -- noble`
+1. Run gateway: `sudo npm run start` (sudo is necessary for Noble
+    1. If you want to use the "Example" adapter, run: `npm run start -- example`
 1. The gateway should start and it should connect immediately

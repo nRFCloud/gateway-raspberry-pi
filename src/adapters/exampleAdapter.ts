@@ -1,6 +1,6 @@
-import { BluetoothAdapter } from '../bluetoothAdapter';
-import { DeviceScanResult } from '../interfaces/scanResult';
-import { Characteristic, Descriptor, Service, Services } from '../interfaces/bluetooth';
+import { BluetoothAdapter } from 'gateway-common';
+import { Characteristic, Descriptor, Services } from 'gateway-common';
+import { DeviceScanResult } from 'gateway-common';
 
 export class ExampleAdapter extends BluetoothAdapter {
 

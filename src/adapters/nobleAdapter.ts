@@ -6,16 +6,19 @@ import {
 	Peripheral,
 	Service as NobleService,
 } from 'noble';
+import { AdvertisementPacket, parseManufacturerData } from 'beacon-utilities';
 import {
-	AdvertisementPacket,
-	parseManufacturerData,
-} from 'beacon-utilities';
-
-import { AdapterEvent, BluetoothAdapter } from '../bluetoothAdapter';
-import { DeviceScanResult } from '../interfaces/scanResult';
-import { Address } from '../interfaces/device';
-import { Characteristic, CharacteristicProperties, Descriptor, Service, Services } from '../interfaces/bluetooth';
-import { shortenUUID } from '../utils';
+	AdapterEvent,
+	Address,
+	BluetoothAdapter,
+	Characteristic,
+	CharacteristicProperties,
+	Descriptor,
+	DeviceScanResult,
+	Service,
+	Services,
+	shortenUUID,
+} from 'gateway-common';
 
 function formatUUIDIfNecessary(uuid) {
 	return uuid.toLowerCase();

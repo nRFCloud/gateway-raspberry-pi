@@ -1,10 +1,10 @@
+import { Gateway, GatewayConfiguration, GatewayEvent } from 'gateway-common';
+import { NobleAdapter } from './src/adapters/nobleAdapter';
+import { ExampleAdapter } from './src/adapters/exampleAdapter';
+
 require('dotenv').config();
 
-import { Gateway, GatewayConfiguration, GatewayEvent } from './src/gateway';
-import { ExampleAdapter } from './src/adapters/exampleAdapter';
-import { NobleAdapter } from './src/adapters/nobleAdapter';
-
-function main(useNoble: boolean = false) {
+function main(useNoble: boolean = true) {
 	const configuration: GatewayConfiguration = {
 		keyPath: process.env.PRIVATE_KEY_PATH,
 		certPath: process.env.CLIENT_CERT_PATH,
@@ -26,4 +26,4 @@ function main(useNoble: boolean = false) {
 	});
 }
 
-main(process.argv.includes('noble'));
+main(!process.argv.includes('example'));

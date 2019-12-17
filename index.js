@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-require('dotenv').config();
-var gateway_1 = require("./src/gateway");
-var exampleAdapter_1 = require("./src/adapters/exampleAdapter");
+var gateway_common_1 = require("gateway-common");
 var nobleAdapter_1 = require("./src/adapters/nobleAdapter");
+var exampleAdapter_1 = require("./src/adapters/exampleAdapter");
+require('dotenv').config();
 function main(useNoble) {
     if (useNoble === void 0) { useNoble = false; }
     var configuration = {
@@ -16,11 +16,11 @@ function main(useNoble) {
         tenantId: process.env.TENANT_ID,
         bluetoothAdapter: useNoble ? new nobleAdapter_1.NobleAdapter() : new exampleAdapter_1.ExampleAdapter(),
     };
-    var gateway = new gateway_1.Gateway(configuration);
-    gateway.on(gateway_1.GatewayEvent.Deleted, function () {
+    var gateway = new gateway_common_1.Gateway(configuration);
+    gateway.on(gateway_common_1.GatewayEvent.Deleted, function () {
         process.exit();
     });
-    gateway.on(gateway_1.GatewayEvent.NameChanged, function (newName) {
+    gateway.on(gateway_common_1.GatewayEvent.NameChanged, function (newName) {
         console.log("Gateway name changed to " + newName);
     });
 }
