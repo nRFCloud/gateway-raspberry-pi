@@ -13,8 +13,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var gateway_common_1 = require("gateway-common");
-var gateway_common_2 = require("gateway-common");
+var gateway_common_1 = require("@nrfcloud/gateway-common");
+var gateway_common_2 = require("@nrfcloud/gateway-common");
 var ExampleAdapter = (function (_super) {
     __extends(ExampleAdapter, _super);
     function ExampleAdapter() {

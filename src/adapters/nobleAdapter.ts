@@ -18,7 +18,7 @@ import {
 	Service,
 	Services,
 	shortenUUID,
-} from 'gateway-common';
+} from '@nrfcloud/gateway-common';
 
 function formatUUIDIfNecessary(uuid) {
 	return uuid.toLowerCase();

@@ -1,4 +1,4 @@
-import { Gateway, GatewayConfiguration, GatewayEvent } from 'gateway-common';
+import { Gateway, GatewayConfiguration, GatewayEvent } from '@nrfcloud/gateway-common';
 import { NobleAdapter } from './src/adapters/nobleAdapter';
 import { ExampleAdapter } from './src/adapters/exampleAdapter';
 

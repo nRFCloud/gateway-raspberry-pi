@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var gateway_common_1 = require("gateway-common");
+var gateway_common_1 = require("@nrfcloud/gateway-common");
 var nobleAdapter_1 = require("./src/adapters/nobleAdapter");
 var exampleAdapter_1 = require("./src/adapters/exampleAdapter");
 require('dotenv').config();
 function main(useNoble) {
-    if (useNoble === void 0) { useNoble = false; }
+    if (useNoble === void 0) { useNoble = true; }
     var configuration = {
         keyPath: process.env.PRIVATE_KEY_PATH,
         certPath: process.env.CLIENT_CERT_PATH,
@@ -24,4 +24,4 @@ function main(useNoble) {
         console.log("Gateway name changed to " + newName);
     });
 }
-main(process.argv.includes('noble'));
+main(!process.argv.includes('example'));

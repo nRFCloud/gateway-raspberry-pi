@@ -1,6 +1,6 @@
-import { BluetoothAdapter } from 'gateway-common';
-import { Characteristic, Descriptor, Services } from 'gateway-common';
-import { DeviceScanResult } from 'gateway-common';
+import { BluetoothAdapter } from '@nrfcloud/gateway-common';
+import { Characteristic, Descriptor, Services } from '@nrfcloud/gateway-common';
+import { DeviceScanResult } from '@nrfcloud/gateway-common';
 
 export class ExampleAdapter extends BluetoothAdapter {
 

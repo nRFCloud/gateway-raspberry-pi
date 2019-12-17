@@ -65,7 +65,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var noble_1 = __importDefault(require("@abandonware/noble"));
 var beacon_utilities_1 = require("beacon-utilities");
-var gateway_common_1 = require("gateway-common");
+var gateway_common_1 = require("@nrfcloud/gateway-common");
 function formatUUIDIfNecessary(uuid) {
     return uuid.toLowerCase();
 }
