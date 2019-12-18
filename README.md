@@ -9,6 +9,6 @@ To use:
 1. Copy the files to the root of this project (same directory as this README)
 1. Run `npm install`
 1. Build code: `npm run build`
-1. Run gateway: `sudo npm run start` (sudo is necessary for Noble
+1. Run gateway: `sudo npm run start` (sudo is necessary for Noble)
     1. If you want to use the "Example" adapter, run: `npm run start -- example`
 1. The gateway should start and it should connect immediately
