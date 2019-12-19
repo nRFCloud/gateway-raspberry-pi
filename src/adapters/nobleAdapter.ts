@@ -14,7 +14,7 @@ import {
 	Characteristic,
 	CharacteristicProperties,
 	Descriptor,
-	DeviceScanResult,
+	ScanResult,
 	Service,
 	Services,
 	shortenUUID,
@@ -44,18 +44,20 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	startScan(
-		resultCallback: (deviceScanResult: DeviceScanResult) => void
+		resultCallback: (deviceScanResult: ScanResult) => void
 	) {
 		const listener = (peripheral: Peripheral) => {
 			this.peripheralEntries[peripheral.address] = peripheral;
-			const device = new DeviceScanResult();
-			device.address = {
-				address: peripheral.address.toUpperCase(),
-				type: peripheral.addressType,
-			} as Address;
-			device.rssi = peripheral.rssi;
-			device.name = peripheral.advertisement.localName;
-			device.advertisementData = this.convertAdvertisementData(peripheral.advertisement);
+			const device: ScanResult = {
+					address: {
+						address: peripheral.address.toUpperCase(),
+						type: peripheral.addressType,
+					} as Address,
+
+					rssi: peripheral.rssi,
+					name: peripheral.advertisement.localName,
+					advertisementData: this.convertAdvertisementData(peripheral.advertisement),
+				};
 			resultCallback(device);
 		};
 		noble.on('discover', listener);

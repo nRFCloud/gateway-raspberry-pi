@@ -14,7 +14,6 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var gateway_common_1 = require("@nrfcloud/gateway-common");
-var gateway_common_2 = require("@nrfcloud/gateway-common");
 var ExampleAdapter = (function (_super) {
     __extends(ExampleAdapter, _super);
     function ExampleAdapter() {
@@ -26,12 +25,12 @@ var ExampleAdapter = (function (_super) {
     ExampleAdapter.prototype.stopScan = function () {
     };
     ExampleAdapter.prototype.convertScanResult = function (rawScanResult) {
-        var device = new gateway_common_2.DeviceScanResult();
-        device.address = rawScanResult.address;
-        device.rssi = rawScanResult.rssi;
-        device.name = rawScanResult.name;
-        device.advertisementData = rawScanResult.advertisementData;
-        return device;
+        return {
+            address: rawScanResult.address,
+            rssi: rawScanResult.rssi,
+            name: rawScanResult.name,
+            advertisementData: rawScanResult.advertisementData,
+        };
     };
     ExampleAdapter.prototype.disconnect = function (id) {
         return undefined;

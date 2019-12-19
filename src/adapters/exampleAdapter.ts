@@ -1,11 +1,9 @@
-import { BluetoothAdapter } from '@nrfcloud/gateway-common';
-import { Characteristic, Descriptor, Services } from '@nrfcloud/gateway-common';
-import { DeviceScanResult } from '@nrfcloud/gateway-common';
+import { BluetoothAdapter, Characteristic, Descriptor, ScanResult, Services } from '@nrfcloud/gateway-common';
 
 export class ExampleAdapter extends BluetoothAdapter {
 
 	startScan(
-		resultCallback: (deviceScanResult: DeviceScanResult) => void
+		resultCallback: (deviceScanResult: ScanResult) => void
 	) {
 		console.info('starting scan with params', arguments);
 		//Call the bluetooth stack on the device. Pass the results through the converter and then to the resultCallback
@@ -18,13 +16,13 @@ export class ExampleAdapter extends BluetoothAdapter {
 	stopScan() {
 	}
 
-	private convertScanResult(rawScanResult): DeviceScanResult {
-		const device = new DeviceScanResult();
-		device.address = rawScanResult.address;
-		device.rssi = rawScanResult.rssi;
-		device.name = rawScanResult.name;
-		device.advertisementData = rawScanResult.advertisementData;
-		return device;
+	private convertScanResult(rawScanResult): ScanResult {
+		return {
+			address: rawScanResult.address,
+			rssi: rawScanResult.rssi,
+			name: rawScanResult.name,
+			advertisementData: rawScanResult.advertisementData,
+		};
 	}
 
 	disconnect(id: string): Promise<any> {

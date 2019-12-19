@@ -89,14 +89,15 @@ var NobleAdapter = (function (_super) {
         var _this = this;
         var listener = function (peripheral) {
             _this.peripheralEntries[peripheral.address] = peripheral;
-            var device = new gateway_common_1.DeviceScanResult();
-            device.address = {
-                address: peripheral.address.toUpperCase(),
-                type: peripheral.addressType,
+            var device = {
+                address: {
+                    address: peripheral.address.toUpperCase(),
+                    type: peripheral.addressType,
+                },
+                rssi: peripheral.rssi,
+                name: peripheral.advertisement.localName,
+                advertisementData: _this.convertAdvertisementData(peripheral.advertisement),
             };
-            device.rssi = peripheral.rssi;
-            device.name = peripheral.advertisement.localName;
-            device.advertisementData = _this.convertAdvertisementData(peripheral.advertisement);
             resultCallback(device);
         };
         noble_1.default.on('discover', listener);

@@ -28,7 +28,7 @@
 	"homepage": "https://github.com/nRFCloud/gateway-raspberry-pi#readme",
 	"dependencies": {
 		"@abandonware/noble": "^1.9.2-5",
-		"@nrfcloud/gateway-common": "^3.0.1",
+		"@nrfcloud/gateway-common": "^3.1.0",
 		"@types/aws-iot-device-sdk": "^2.2.0",
 		"@types/noble": "0.0.39",
 		"aws-iot-device-sdk": "^2.2.1",
