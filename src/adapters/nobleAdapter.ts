@@ -26,9 +26,9 @@ function formatUUIDIfNecessary(uuid) {
 
 export class NobleAdapter extends BluetoothAdapter {
 
-	private peripheralEntries: {[key: string]: Peripheral} = {};
-	private serviceEntries: {[key: string]: NobleService} = {};
-	private characteristicEntries: {[key: string]: NobleCharacteristic} = {};
+	private peripheralEntries: { [key: string]: Peripheral } = {};
+	private serviceEntries: { [key: string]: NobleService } = {};
+	private characteristicEntries: { [key: string]: NobleCharacteristic } = {};
 	private descriptorEntries = {};
 	private adapterState;
 	private gatewayState = {
@@ -47,17 +47,18 @@ export class NobleAdapter extends BluetoothAdapter {
 		resultCallback: (deviceScanResult: ScanResult) => void
 	) {
 		const listener = (peripheral: Peripheral) => {
-			this.peripheralEntries[peripheral.address] = peripheral;
+			const periphaddress = peripheral.address.toUpperCase();
+			this.peripheralEntries[periphaddress] = peripheral;
 			const device: ScanResult = {
-					address: {
-						address: peripheral.address.toUpperCase(),
-						type: peripheral.addressType,
-					} as Address,
+				address: {
+					address: periphaddress,
+					type: peripheral.addressType,
+				} as Address,
 
-					rssi: peripheral.rssi,
-					name: peripheral.advertisement.localName,
-					advertisementData: this.convertAdvertisementData(peripheral.advertisement),
-				};
+				rssi: peripheral.rssi,
+				name: peripheral.advertisement.localName,
+				advertisementData: this.convertAdvertisementData(peripheral.advertisement),
+			};
 			resultCallback(device);
 		};
 		noble.on('discover', listener);
@@ -111,7 +112,7 @@ export class NobleAdapter extends BluetoothAdapter {
 	async writeDescriptorValue(id: string, descriptor: Descriptor): Promise<void> {
 		const desc = await this.getNobleDescriptor(id, descriptor);
 		return new Promise<void>((resolve, reject) => {
-			desc.writeValue(Buffer.from(descriptor.value), (error) =>{
+			desc.writeValue(Buffer.from(descriptor.value), (error) => {
 				if (error) {
 					reject(error);
 				} else {
@@ -188,11 +189,11 @@ export class NobleAdapter extends BluetoothAdapter {
 		return returned;
 	}
 
-	async subscribe(deviceId: string, characteristic: Characteristic, callback: (characteristic:Characteristic) => void): Promise<void> {
+	async subscribe(deviceId: string, characteristic: Characteristic, callback: (characteristic: Characteristic) => void): Promise<void> {
 		const nobleChar = await this.getNobleCharacteristic(deviceId, characteristic);
 		nobleChar.on('data', (data, isNotification) => {
 			if (isNotification) {
-				const result: Characteristic = {...characteristic, value: data && Array.from(data)};
+				const result: Characteristic = { ...characteristic, value: data && Array.from(data) };
 				callback(result);
 			}
 		});
@@ -225,7 +226,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		const peripheral = await this.getDeviceById(deviceId);
 		return new Promise<number>((resolve, reject) => {
 			peripheral.updateRssi((error, rssi) => {
-				if(error) {
+				if (error) {
 					reject(error);
 				} else {
 					resolve(rssi);
@@ -235,6 +236,7 @@ export class NobleAdapter extends BluetoothAdapter {
 	}
 
 	private async getDeviceById(deviceId: string): Promise<Peripheral> {
+		deviceId = deviceId.toUpperCase();
 		if (typeof this.peripheralEntries[deviceId] === 'undefined') {
 			this.peripheralEntries[deviceId] = await this.scanForDevice(deviceId);
 		}
@@ -432,14 +434,14 @@ export class NobleAdapter extends BluetoothAdapter {
 	private getServiceData(serviceData: Array<{
 		uuid: string,
 		data: Buffer
-	}>): {[key: string]: number[]} {
+	}>): { [key: string]: number[] } {
 		const returned = {};
-		for(const entry of serviceData) {
+		for (const entry of serviceData) {
 			const data = entry.data;
 			returned[entry.uuid] = data && Array.from(data);
 		}
 		return returned;
-}
+	}
 
 	private async getNobleCharacteristic(id: string, characteristic: Characteristic): Promise<NobleCharacteristic> {
 		const pathParts = characteristic.path.split('/');

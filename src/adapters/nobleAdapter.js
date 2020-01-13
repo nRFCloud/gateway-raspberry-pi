@@ -88,10 +88,11 @@ var NobleAdapter = (function (_super) {
     NobleAdapter.prototype.startScan = function (resultCallback) {
         var _this = this;
         var listener = function (peripheral) {
-            _this.peripheralEntries[peripheral.address] = peripheral;
+            var periphaddress = peripheral.address.toUpperCase();
+            _this.peripheralEntries[periphaddress] = peripheral;
             var device = {
                 address: {
-                    address: peripheral.address.toUpperCase(),
+                    address: periphaddress,
                     type: peripheral.addressType,
                 },
                 rssi: peripheral.rssi,
@@ -412,6 +413,7 @@ var NobleAdapter = (function (_super) {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
+                        deviceId = deviceId.toUpperCase();
                         if (!(typeof this.peripheralEntries[deviceId] === 'undefined')) return [3, 2];
                         _a = this.peripheralEntries;
                         _b = deviceId;
