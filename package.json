@@ -34,6 +34,7 @@
 		"aws-iot-device-sdk": "^2.2.1",
 		"beacon-utilities": "^1.1.2",
 		"dotenv": "^8.2.0",
+		"is-elevated": "^3.0.0",
 		"lodash": "^4.17.15"
 	},
 	"devDependencies": {

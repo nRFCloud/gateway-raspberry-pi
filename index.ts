@@ -1,10 +1,16 @@
+import isElevated from 'is-elevated';
 import { Gateway, GatewayConfiguration, GatewayEvent } from '@nrfcloud/gateway-common';
 import { NobleAdapter } from './src/adapters/nobleAdapter';
 import { ExampleAdapter } from './src/adapters/exampleAdapter';
 
+
 require('dotenv').config();
 
-function main(useNoble: boolean = true) {
+async function main(useNoble: boolean = true) {
+	if (!(await isElevated())) {
+		console.error('You need to run this as root (sudo)');
+		process.exit(1);
+	}
 	const configuration: GatewayConfiguration = {
 		keyPath: process.env.PRIVATE_KEY_PATH,
 		certPath: process.env.CLIENT_CERT_PATH,
