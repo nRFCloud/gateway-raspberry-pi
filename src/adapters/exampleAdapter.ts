@@ -61,7 +61,7 @@ export class ExampleAdapter extends BluetoothAdapter {
 		return undefined;
 	}
 
-	getRSSI(deviceId: string): Promise<number> {
+	getRSSI(deviceId: string): Promise<ScanResult> {
 		return undefined;
 	}
 }

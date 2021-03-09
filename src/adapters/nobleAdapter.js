@@ -399,7 +399,12 @@ var NobleAdapter = (function (_super) {
                                         reject(error);
                                     }
                                     else {
-                                        resolve(rssi);
+                                        resolve({
+                                            address: {
+                                                address: deviceId,
+                                                type: '',
+                                            }, rssi: rssi
+                                        });
                                     }
                                 });
                             })];

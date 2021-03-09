@@ -222,14 +222,19 @@ export class NobleAdapter extends BluetoothAdapter {
 		});
 	}
 
-	async getRSSI(deviceId: string): Promise<number> {
+	async getRSSI(deviceId: string): Promise<ScanResult> {
 		const peripheral = await this.getDeviceById(deviceId);
-		return new Promise<number>((resolve, reject) => {
+		return new Promise<ScanResult>((resolve, reject) => {
 			peripheral.updateRssi((error, rssi) => {
 				if (error) {
 					reject(error);
 				} else {
-					resolve(rssi);
+					resolve({
+						address: {
+							address: deviceId,
+							type: '',
+						}, rssi
+					});
 				}
 			});
 		});
