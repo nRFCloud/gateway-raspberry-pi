@@ -128,7 +128,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		peripheral.removeAllListeners();
 	}
 
-	async connect(id: string): Promise<any> {
+	async connect(id: string): Promise<void> {
 		const peripheral = await this.getDeviceById(id);
 		if (['connected', 'connecting'].includes(peripheral.state)) {
 			return;
@@ -139,7 +139,7 @@ export class NobleAdapter extends BluetoothAdapter {
 		peripheral.once('connect', () => {
 			this.emit(AdapterEvent.DeviceConnected, id);
 		});
-		return new Promise<any>(async (resolve, reject) => {
+		return new Promise<void>(async (resolve, reject) => {
 			noble.stopScanning();
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			peripheral.connect((error) => {

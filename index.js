@@ -43,11 +43,12 @@ var is_elevated_1 = __importDefault(require("is-elevated"));
 var gateway_common_1 = require("@nrfcloud/gateway-common");
 var nobleAdapter_1 = require("./src/adapters/nobleAdapter");
 var exampleAdapter_1 = require("./src/adapters/exampleAdapter");
+var fs = require('fs');
 require('dotenv').config();
 function main(useNoble) {
     if (useNoble === void 0) { useNoble = true; }
     return __awaiter(this, void 0, void 0, function () {
-        var configuration, gateway;
+        var keyExists, clientCertExists, caCertExists, configuration, gateway;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4, is_elevated_1.default()];
@@ -56,16 +57,28 @@ function main(useNoble) {
                         console.error('You need to run this as root (sudo)');
                         process.exit(1);
                     }
+                    keyExists = fs.existsSync(process.env.PRIVATE_KEY_PATH);
+                    clientCertExists = fs.existsSync(process.env.CLIENT_CERT_PATH);
+                    caCertExists = fs.existsSync(process.env.CA_CERT_PATH);
+                    if (!keyExists ||
+                        !clientCertExists ||
+                        !caCertExists) {
+                        console.error("One or more required files are missing" + (keyExists ? '' : '\nPrivate key') + (clientCertExists ? '' : '\nClient Certificate') + (caCertExists ? '' : '\nCA Certificate'));
+                        process.exit(1);
+                    }
                     configuration = {
-                        keyPath: process.env.PRIVATE_KEY_PATH,
-                        certPath: process.env.CLIENT_CERT_PATH,
-                        caPath: process.env.CA_CERT_PATH,
+                        keyPath: "./" + process.env.PRIVATE_KEY_PATH,
+                        certPath: "./" + process.env.CLIENT_CERT_PATH,
+                        caPath: "./" + process.env.CA_CERT_PATH,
                         gatewayId: process.env.GATEWAY_ID,
                         host: process.env.HOST,
                         stage: process.env.ENVIRONMENT_STAGE,
                         tenantId: process.env.TENANT_ID,
                         bluetoothAdapter: useNoble ? new nobleAdapter_1.NobleAdapter() : new exampleAdapter_1.ExampleAdapter(),
+                        protocol: 'mqtts',
+                        debug: true,
                     };
+                    console.info('Config is', configuration);
                     gateway = new gateway_common_1.Gateway(configuration);
                     gateway.on(gateway_common_1.GatewayEvent.Deleted, function () {
                         process.exit();
