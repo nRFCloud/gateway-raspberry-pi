@@ -1,3 +1,6 @@
+# NOTE: This code no longer works. We hope to resolve the situation soon
+
+
 # gateway-raspberry-pi
 A BLE gateway implementation for nRF Cloud that can run on Raspberry PI (headless)
 
